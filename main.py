@@ -75,7 +75,9 @@ def run(log_level: str = "DEBUG"):
             Use the user’s activeWorkspaceId from from user object for workspace_id in all api calls, where it is required
             unless user requested a specific workspace.
     """
-    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level))
+    # mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level))
+    # for http client tests
+    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level), stateless_http=True)
     register_tools(mcp, token)
     mcp.run(transport="streamable-http")
 

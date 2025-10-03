@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
 
 class HttpHeader(BaseModel):
-    name: str = Field("Header name.")
-    value: str = Field("Header value.")
+    name: str = Field(..., description="HTTP header name")
+    value: str = Field(..., description="HTTP header value")
 
+    class Config:
+        extra = "allow"  # allows additional unexpected fields

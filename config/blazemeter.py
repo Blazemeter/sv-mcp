@@ -3,6 +3,7 @@ VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
 BZM_BASE_URL: str = "https://a.blazemeter.com/"
 VS_BASE_URL: str = "https://mock.blazemeter.com/"
 TOOLS_PREFIX: str = "blazemeter"
+VS_TOOLS_PREFIX: str = "virtual_services"
 
 USER_ENDPOINT: str = "/user"
 ACCOUNTS_ENDPOINT: str = "/accounts"

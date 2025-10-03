@@ -3,7 +3,7 @@ from typing import Optional, Dict, Any
 import httpx
 from mcp.server.fastmcp import Context
 
-from config.blazemeter import TOOLS_PREFIX, VS_SERVICES_ENDPOINT, WORKSPACES_ENDPOINT
+from config.blazemeter import VS_SERVICES_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX
 from config.token import BzmToken
 from formatters.service import format_services
 from models.result import BaseResult
@@ -46,13 +46,13 @@ class ServiceManager:
             self.token,
             "POST",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_SERVICES_ENDPOINT}",
-            result_formatter=format_services(),
+            result_formatter=format_services,
             json=service_body
         )
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
-        name=f"{TOOLS_PREFIX}_service",
+        name=f"{VS_TOOLS_PREFIX}_service",
         description="""
         Operations on services. 
         Use this when a user needs to create or select a service.
@@ -70,8 +70,6 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 service_name (str): Mandatory. The required name of the service to create.
                 workspace_id (int): Mandatory. The id of the workspace to create service in.
-        Hints:
-        - If service id and match with that the account's workspace.
     """
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
@@ -84,7 +82,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await service_manager.list(args["workspace_id"], args.get("limit", 50),
                                                       args.get("offset", 0))
                 case "create":
-                    return await service_manager.create(args["service_name"], args["service_id"])
+                    return await service_manager.create(args["service_name"], args["workspace_id"])
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in service manager tool"

@@ -7,7 +7,6 @@ from config.blazemeter import TOOLS_PREFIX, VS_SERVICES_ENDPOINT, WORKSPACES_END
 from config.token import BzmToken
 from formatters.service import format_services
 from models.result import BaseResult
-from tools import bridge
 from tools.utils import vs_api_request
 
 
@@ -39,6 +38,17 @@ class ServiceManager:
             params=parameters
         )
 
+    async def create(self, service_name: str, workspace_id: int) -> BaseResult:
+        service_body = {
+            "name": service_name,
+        }
+        return await vs_api_request(
+            self.token,
+            "POST",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_SERVICES_ENDPOINT}",
+            result_formatter=format_services(),
+            json=service_body
+        )
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -56,6 +66,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace to list services from.
                 limit (int, default=10, valid=[1 to 50]): The number of services to list.
                 offset (int, default=0): Number of services to skip.
+        - create: Create a new service.
+            args(dict): Dictionary with the following required parameters:
+                service_name (str): Mandatory. The required name of the service to create.
+                workspace_id (int): Mandatory. The id of the workspace to create service in.
         Hints:
         - If service id and match with that the account's workspace.
     """
@@ -69,6 +83,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "list":
                     return await service_manager.list(args["workspace_id"], args.get("limit", 50),
                                                       args.get("offset", 0))
+                case "create":
+                    return await service_manager.create(args["service_name"], args["service_id"])
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in service manager tool"

@@ -12,7 +12,7 @@ from models.execution import TestExecutionDetailed
 from models.result import BaseResult
 from tools import bridge
 from tools.report_manager import ReportManager
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class ExecutionResult(BaseResult):
@@ -40,7 +40,7 @@ class ExecutionManager:
         start_body = {
             "isDebugRun": is_debug_run,
         }
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "POST",
             f"/tests/{test_id}/start",
@@ -51,7 +51,7 @@ class ExecutionManager:
 
     async def read(self, execution_id: int) -> BaseResult:
 
-        execution_response = await api_request(
+        execution_response = await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}/{execution_id}",
@@ -74,7 +74,7 @@ class ExecutionManager:
             "level ": 200,  # INFO
             "events": False  # Evaluate the use in the future
         }
-        status_response = await api_request(
+        status_response = await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}/{execution_id}/status",
@@ -106,7 +106,7 @@ class ExecutionManager:
             "sort[]": "-updated"
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}",

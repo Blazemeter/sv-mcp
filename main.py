@@ -51,7 +51,7 @@ def get_token():
     return token
 
 
-def run(log_level: str = "CRITICAL"):
+def run(log_level: str = "DEBUG"):
     token = get_token()
     instructions = """
     # BlazeMeter MCP Server
@@ -64,17 +64,20 @@ def run(log_level: str = "CRITICAL"):
     General rules:
         - If you have the information needed to call a tool action with its arguments, do so.
         - Read action always get more information about a particular item than the list action, list only display minimal information.
-        - Read the current user information at startup to learn the username, default account, workspace and project, and other important information.
+        - Read the current user information at startup to learn the username, default account and workspace information.
         - Dependencies:
             accounts: It doesn't depend on anyone. In user you can access which is the default account, and in the list of accounts, you can see the accounts available to the user.
             workspaces: Workspaces belong to a particular account.
-            projects: Projects belong to a particular workspace.
-            tests: Tests belong to a particular project.
-            executions: Executions belong to a particular test.
+            services: Services belong to a particular workspace.
+            transactions: Transactions belong to a particular service.
+            virtual services: Virtual Services belong to a particular service.
+        Important: 
+            Use the user’s activeWorkspaceId from from user object for workspace_id in all api calls, where it is required
+            unless user requested a specific workspace.
     """
     mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level))
     register_tools(mcp, token)
-    mcp.run(transport="stdio")
+    mcp.run(transport="streamable-http")
 
 
 if __name__ == "__main__":

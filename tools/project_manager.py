@@ -9,7 +9,7 @@ from config.token import BzmToken
 from formatters.project import format_projects
 from models.result import BaseResult
 from tools import bridge
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class ProjectManager:
@@ -19,7 +19,7 @@ class ProjectManager:
         self.ctx = ctx
 
     async def read(self, project_id: int) -> BaseResult:
-        project_result = await api_request(
+        project_result = await bzm_api_request(
             self.token,
             "GET",
             f"{PROJECTS_ENDPOINT}/{project_id}",
@@ -53,7 +53,7 @@ class ProjectManager:
             "sort[]": "-updated"
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{PROJECTS_ENDPOINT}",

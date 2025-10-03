@@ -15,3 +15,5 @@ dependencies = [
 
 [project.scripts]
 bzm-mcp = "main:run"
+[tool.setuptools]
+packages = ["config", "models", "formatters"]

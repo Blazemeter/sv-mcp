@@ -4,6 +4,7 @@ from tools.workspace_manager import register as register_workspace_manager
 from tools.test_manager import register as register_test_manager
 from tools.execution_manager import register as register_execution_manager
 from tools.account_manager import register as register_account_manager
+from tools.vs.service_manager import register as register_service_manager
 from config.token import BzmToken
 from typing import Optional
 
@@ -21,3 +22,5 @@ def register_tools(mcp, token: Optional[BzmToken]):
     register_test_manager(mcp, token)
     register_execution_manager(mcp, token)
     register_account_manager(mcp, token)
+    # register vs tools
+    register_service_manager(mcp, token)

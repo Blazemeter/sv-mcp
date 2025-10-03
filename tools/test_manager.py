@@ -16,7 +16,7 @@ from formatters.test import format_tests
 from models.performance_test import PerformanceTestObject
 from models.result import BaseResult
 from tools import bridge
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 logging.basicConfig(level=logging.DEBUG)
 logger = logging.getLogger(__name__)
@@ -31,7 +31,7 @@ class TestManager:
 
     async def read(self, test_id: int) -> BaseResult:
 
-        test_result = await api_request(
+        test_result = await bzm_api_request(
             self.token,
             "GET",
             f"{TESTS_ENDPOINT}/{test_id}",
@@ -64,7 +64,7 @@ class TestManager:
                 "scriptType": "jmeter"
             }
         }
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "POST",
             f"{TESTS_ENDPOINT}",
@@ -180,7 +180,7 @@ class TestManager:
             endpoint = f"{TESTS_ENDPOINT}/{test_id}/files"
             logger.debug(f"Uploading to endpoint: {endpoint}")
 
-            result = await api_request(
+            result = await bzm_api_request(
                 self.token,
                 "POST",
                 endpoint,
@@ -205,7 +205,7 @@ class TestManager:
                 }
             }
 
-            return await api_request(
+            return await bzm_api_request(
                 self.token,
                 "PATCH",
                 f"{TESTS_ENDPOINT}/{test_id}",
@@ -262,7 +262,7 @@ class TestManager:
             "sort[]": "-updated"
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{TESTS_ENDPOINT}",
@@ -335,7 +335,7 @@ class TestManager:
             "overrideExecutions": override_executions
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "PATCH",
             f"{TESTS_ENDPOINT}/{performance_test.test_id}",

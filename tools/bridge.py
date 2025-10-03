@@ -7,7 +7,7 @@ from models.result import BaseResult
 # NOTE: Imports are performed locally in each method to avoid cyclical import problems.
 # This file currently acts as a bridge between different managers to access specific methods,
 # primarily for validation of reference elements.
-
+# BZM
 async def read_account(token: BzmToken, ctx: Context, account_id: int) -> BaseResult:
     from tools.account_manager import AccountManager
     return await AccountManager(token, ctx).read(account_id)
@@ -37,3 +37,9 @@ async def count_project_tests(token: BzmToken, ctx: Context, project_id: int) ->
 async def read_execution(token: BzmToken, ctx: Context, execution_id: int) -> BaseResult:
     from tools.execution_manager import ExecutionManager
     return await ExecutionManager(token, ctx).read(execution_id)
+
+
+# VS section
+async def read_service(token: BzmToken, ctx: Context, service_id: int) -> BaseResult:
+    from tools.vs.service_manager import ServiceManager
+    return await ServiceManager(token, ctx).read(service_id)

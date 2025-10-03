@@ -9,7 +9,7 @@ from config.blazemeter import TOOLS_PREFIX, USER_ENDPOINT
 from config.token import BzmToken
 from formatters.user import format_users
 from models.result import BaseResult
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class UserManager:
@@ -19,7 +19,7 @@ class UserManager:
         self.ctx = ctx
 
     async def read(self) -> BaseResult:
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{USER_ENDPOINT}",

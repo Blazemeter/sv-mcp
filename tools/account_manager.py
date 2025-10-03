@@ -7,7 +7,7 @@ from config.blazemeter import ACCOUNTS_ENDPOINT, TOOLS_PREFIX
 from config.token import BzmToken
 from formatters.account import format_accounts
 from models.result import BaseResult
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class AccountManager:
@@ -21,7 +21,7 @@ class AccountManager:
         self.ctx = ctx
 
     async def read(self, account_id: int) -> BaseResult:
-        account_result = await api_request(
+        account_result = await bzm_api_request(
             self.token,
             "GET",
             f"{ACCOUNTS_ENDPOINT}/{account_id}",
@@ -48,7 +48,7 @@ class AccountManager:
             "sort[]": "-updated"
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{ACCOUNTS_ENDPOINT}",

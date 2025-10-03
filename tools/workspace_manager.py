@@ -10,7 +10,7 @@ from config.token import BzmToken
 from formatters.workspace import format_workspaces, format_workspaces_detailed, format_workspaces_locations
 from models.result import BaseResult
 from tools import bridge
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class WorkspaceManager:
@@ -25,7 +25,7 @@ class WorkspaceManager:
 
     async def read(self, workspace_id: int) -> BaseResult:
 
-        workspace_result = await api_request(
+        workspace_result = await bzm_api_request(
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}",
@@ -56,7 +56,7 @@ class WorkspaceManager:
             "sort[]": "-updated"
         }
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}",
@@ -66,7 +66,7 @@ class WorkspaceManager:
 
     async def read_locations(self, workspace_id: int, purpose: str = "load") -> BaseResult:
 
-        locations_result = await api_request(
+        locations_result = await bzm_api_request(
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}",

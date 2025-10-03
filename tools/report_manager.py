@@ -5,7 +5,7 @@ from mcp.server.fastmcp import Context
 from config.blazemeter import EXECUTIONS_ENDPOINT
 from config.token import BzmToken
 from tools import bridge
-from tools.utils import api_request
+from tools.utils import bzm_api_request
 
 
 class ReportManager:
@@ -20,7 +20,7 @@ class ReportManager:
         if execution_result.error:
             return execution_result
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}/{master_id}/reports/default/summary")
@@ -35,7 +35,7 @@ class ReportManager:
         if execution_result.error:
             return execution_result
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}/{master_id}/reports/errorsreport/data"
@@ -51,7 +51,7 @@ class ReportManager:
         if execution_result.error:
             return execution_result
 
-        return await api_request(
+        return await bzm_api_request(
             self.token,
             "GET",
             f"{EXECUTIONS_ENDPOINT}/{master_id}/reports/aggregatereport/data"

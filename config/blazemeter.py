@@ -1,5 +1,7 @@
 BZM_API_BASE_URL: str = "https://a.blazemeter.com/api/v4"
+VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
 BZM_BASE_URL: str = "https://a.blazemeter.com/"
+VS_BASE_URL: str = "https://mock.blazemeter.com/"
 TOOLS_PREFIX: str = "blazemeter"
 
 USER_ENDPOINT: str = "/user"
@@ -8,3 +10,7 @@ PROJECTS_ENDPOINT: str = "/projects"
 WORKSPACES_ENDPOINT: str = "/workspaces"
 TESTS_ENDPOINT: str = "/tests"
 EXECUTIONS_ENDPOINT: str = "/masters"
+
+VS_SERVICES_ENDPOINT: str = "services"
+VS_TRANSACTIONS_ENDPOINT: str = "transactions"
+VS_ENDPOINT: str = "mock-services"

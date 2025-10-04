@@ -4,7 +4,7 @@ from models.vs.xpath_matcher_namespace import XmlMatcherNamespace
 
 class MatcherDsl(BaseModel):
     key: str = Field(
-        ...,
+        '',
         description=(
             "Matcher key. For URL matchers has static value 'url', "
             "for header matchers - header name, "
@@ -29,7 +29,7 @@ class MatcherDsl(BaseModel):
         )
     )
     optional: bool = Field(
-        ...,
+        False,
         description="If true, the matcher is optional and does not need to be present to match."
     )
     namespaces: Optional[List[XmlMatcherNamespace]] = Field(

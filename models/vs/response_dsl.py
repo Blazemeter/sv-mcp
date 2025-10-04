@@ -8,7 +8,7 @@ class ResponseDsl(BaseModel):
         description="HTTP status code of the response for the transaction response matching. E.g., 200, 404."
     )
     headers: Optional[List[HttpHeader]] = Field(
-        None,
+        [],
         description="List of response headers"
     )
     content: Optional[str] = Field(

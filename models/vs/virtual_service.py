@@ -1,10 +1,9 @@
 from pydantic import BaseModel, Field
 
 class VirtualService(BaseModel):
-    virtual_service_id: int = Field(..., description="The unique identifier of the virtual service")
-    virtual_service_name: str = Field(..., description="The name of the virtual service")
-    service_id: int = Field(..., description="The unique identifier of the service where the virtual service belongs")
-    workspace_id: int = Field(..., description="The unique identifier of the workspace where the virtual service belongs")
+    id: int = Field(..., description="The unique identifier of the virtual service")
+    name: str = Field(..., description="The name of the virtual service")
+    serviceId: int = Field(..., description="The unique identifier of the service where the virtual service belongs")
     type: str = Field(
         ...,
         description=(
@@ -13,16 +12,16 @@ class VirtualService(BaseModel):
             "while messaging virtual services are used for simulating message-based interactions."
         )
     )
-    harbor_id: str = Field(..., description="BlazeMeter location harbor identifier")
-    ship_id: str = Field(..., description="BlazeMeter location ship identifier")
-    no_matching_request_preference: str = Field(
+    harborId: str = Field(..., description="BlazeMeter location harbor identifier")
+    shipId: str = Field(..., description="BlazeMeter location ship identifier")
+    noMatchingRequestPreference: str = Field(
         ...,
         description=(
             "For transactional virtual services, defines the behavior when no matching request is found. "
             "Possible values are 'return404' and 'bypasslive'."
         )
     )
-    endpoint_preference: str = Field(
+    endpointPreference: str = Field(
         ...,
         description="For transactional virtual services, defines endpoint schema. Possible values are 'HTTP' and 'HTTPS'."
     )

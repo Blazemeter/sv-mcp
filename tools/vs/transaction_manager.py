@@ -1,5 +1,5 @@
 import traceback
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Annotated
 import httpx
 from mcp.server.fastmcp import Context
 
@@ -7,6 +7,7 @@ from config.blazemeter import VS_TRANSACTIONS_ENDPOINT, WORKSPACES_ENDPOINT, VS_
 from config.token import BzmToken
 from formatters.transaction import format_transactions
 from models.result import BaseResult
+from models.vs.generic_dsl import GenericDsl
 from tools.utils import vs_api_request
 
 
@@ -38,17 +39,36 @@ class TransactionManager:
             result_formatter=format_transactions,
             params=parameters)
 
-    async def create(self, service_name: str, workspace_id: int) -> BaseResult:
-        service_body = {
-            "name": service_name,
+    async def create(self, transaction_name: str, workspace_id: int, service_id, type: str,
+                     dsl: GenericDsl) -> BaseResult:
+        # Convert GenericDsl to dict for JSON serialization
+        dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+
+        transaction_body = {
+            "transactions": [
+                {
+                    "serviceId": service_id,
+                    "type": type,
+                    "dsl": dsl_dict,  # Use the dict version
+                    "name": transaction_name,
+                }
+            ]
+        }
+        parameters = {
+            "serviceId": service_id,
         }
         return await vs_api_request(
             self.token,
             "POST",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}",
             result_formatter=format_transactions,
-            json=service_body
+            json=transaction_body,
+            params=parameters
         )
+
+
+from typing import Dict, Any, Optional
+from models.vs.transaction import Transaction
 
 
 def register(mcp, token: Optional[BzmToken]) -> None:
@@ -61,38 +81,62 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         - read: Read a Transaction. Get the information of a transaction.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
-                transaction_id (int): Mandatory. The id of the transaction to get information.
+                id (int): Mandatory. The id of the transaction to get information.
         - list: List all transactions. 
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
-                service_id (int): Optional. The id of the service to list transactions from. Without this it will list all transactions in the workspace.
+                serviceId (int): Optional. The id of the service to list transactions from. Without this it will list all transactions in the workspace.
                 virtual_service_id (int): Optional. The id of the virtual service to list transactions from. Without this it will list all transactions in the workspace.
                 limit (int, default=10, valid=[1 to 50]): The number of transactions to list.
                 offset (int, default=0): Number of transactions to skip.
-        - create: Create a new transactions.
-            args(dict): Dictionary with the following required parameters:
-                transaction_name (str): Mandatory. The required name of the service to create.
-                workspace_id (int): Mandatory. The id of the workspace to create transactions in.
-                service_id (int): Mandatory. The id of the service to create transactions in.
+        - create: Create a new transaction.
+            args(Transaction): A Transaction object with the following fields:
+                name (str): Mandatory. The name of the transaction.
+                serviceId (int): Mandatory. The id of the service to create the transaction in.
                 type (str): Mandatory. The type of the transaction.
-                dsl (GenericDsl): Mandatory. The dsl definition of the transaction.
-    """
+                dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
+                workspace_id (int): Mandatory. The id of the workspace.
+
+        Transaction Schema (including full GenericDsl with RequestDsl and ResponseDsl):
+        """ + str(Transaction.model_json_schema())
     )
-    async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
+    async def transaction(
+            action: str,
+            args: Annotated[Dict[str, Any], Transaction.model_json_schema()],
+            ctx: Context
+    ) -> BaseResult:
         transaction_manager = TransactionManager(token, ctx)
         try:
             match action:
                 case "read":
-                    return await transaction_manager.read(args["workspace_id"], args["transaction_id"])
+                    return await transaction_manager.read(args["workspace_id"], args["id"])
                 case "list":
-                    return await transaction_manager.list(args["workspace_id"], args.get("service_id"),
-                                                          args.get("limit", 50),
-                                                          args.get("offset", 0))
+                    return await transaction_manager.list(
+                        args["workspace_id"],
+                        args.get("serviceId"),
+                        args.get("limit", 50),
+                        args.get("offset", 0)
+                    )
                 case "create":
-                    return await transaction_manager.create(args["service_name"], args["workspace_id"])
+                    # Create Transaction object from args
+                    transaction_data = Transaction(
+                        id=args.get("id", 0),  # Default id for creation
+                        name=args["name"],
+                        serviceId=args["serviceId"],
+                        type=args["type"],
+                        dsl=args["dsl"]
+                    )
+
+                    return await transaction_manager.create(
+                        transaction_data.name,
+                        args["workspace_id"],
+                        transaction_data.serviceId,
+                        transaction_data.type,
+                        transaction_data.dsl
+                    )
                 case _:
                     return BaseResult(
-                        error=f"Action {action} not found in service manager tool"
+                        error=f"Action {action} not found in transaction manager tool"
                     )
         except httpx.HTTPStatusError:
             return BaseResult(

@@ -5,6 +5,13 @@ from pydantic import BaseModel, Field
 from models.vs.mock_service_transaction import MockServiceTransaction
 
 
+class Endpoint(BaseModel):
+    endpoint: str = Field(..., description="Endpoint URL")
+
+    class Config:
+        extra = "ignore"
+
+
 class VirtualService(BaseModel):
     id: int = Field(..., description="The unique identifier of the virtual service")
     name: str = Field(..., description="The name of the virtual service")
@@ -30,12 +37,27 @@ class VirtualService(BaseModel):
         ...,
         description="For transactional virtual services, defines endpoint schema. Possible values are 'HTTP' and 'HTTPS'."
     )
-    replicas: int = Field(...,
+    replicas: int = Field(1,
                           description="The number of replicas for the virtual service. Always set to 1 for all virtual services.")
     mockServiceTransactions: Optional[List[MockServiceTransaction]] = Field(
         [],
         description="List of transaction definitions associated with the virtual service"
     )
+    endpoints: Optional[List[Endpoint]] = Field(
+        [],
+        description="List of virtual service endpoints. Available after deployment only."
+    )
+    httpRunnerEnabled: bool = Field(
+        True,
+        description="Http runner enabled flag, must be enabled for virtual services with 'TRANSACTIONAL' type."
+    )
+
+    class Config:
+        extra = "ignore"
+
+
+class ActionResult(BaseModel):
+    tracking_id: str = Field(..., description="Action tracking id")
 
     class Config:
         extra = "ignore"

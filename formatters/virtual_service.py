@@ -1,7 +1,7 @@
 from typing import (List, Any, Optional)
 
 from models.vs.mock_service_transaction import MockServiceTransaction
-from models.vs.virtual_service import VirtualService
+from models.vs.virtual_service import VirtualService, ActionResult, Endpoint
 
 
 def format_virtual_services(virtual_services: List[Any], params: Optional[dict] = None) -> List[VirtualService]:
@@ -18,7 +18,19 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
                 noMatchingRequestPreference=vs.get("noMatchingRequestPreference"),
                 endpointPreference=vs.get("endpointPreference"),
                 replicas=vs.get("replicas"),
-                mockServiceTransactions=[MockServiceTransaction(**d) for d in vs.get("mockServiceTransactions", [])]
+                mockServiceTransactions=[MockServiceTransaction(**d) for d in vs.get("mockServiceTransactions") or []],
+                endpoints=[Endpoint(**d) for d in vs.get("endpoints") or []],
             )
         )
     return formatted_vs
+
+
+def format_virtual_services_action(trackings: List[Any], params: Optional[dict] = None) -> List[VirtualService]:
+    action_trackings = []
+    for tracking in trackings:
+        action_trackings.append(
+            ActionResult(
+                tracking_id=tracking.get("trackingId")
+            )
+        )
+    return action_trackings

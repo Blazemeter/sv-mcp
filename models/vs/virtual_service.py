@@ -1,4 +1,9 @@
+from typing import Optional, List
+
 from pydantic import BaseModel, Field
+
+from models.vs.mock_service_transaction import MockServiceTransaction
+
 
 class VirtualService(BaseModel):
     id: int = Field(..., description="The unique identifier of the virtual service")
@@ -25,7 +30,12 @@ class VirtualService(BaseModel):
         ...,
         description="For transactional virtual services, defines endpoint schema. Possible values are 'HTTP' and 'HTTPS'."
     )
-    replicas: int = Field(..., description="The number of replicas for the virtual service. Always set to 1 for all virtual services.")
+    replicas: int = Field(...,
+                          description="The number of replicas for the virtual service. Always set to 1 for all virtual services.")
+    mockServiceTransactions: Optional[List[MockServiceTransaction]] = Field(
+        [],
+        description="List of transaction definitions associated with the virtual service"
+    )
 
     class Config:
         extra = "ignore"

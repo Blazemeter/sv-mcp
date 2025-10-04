@@ -14,4 +14,4 @@ EXECUTIONS_ENDPOINT: str = "/masters"
 
 VS_SERVICES_ENDPOINT: str = "services"
 VS_TRANSACTIONS_ENDPOINT: str = "transactions"
-VS_ENDPOINT: str = "mock-services"
+VS_ENDPOINT: str = "service-mocks"

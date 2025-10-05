@@ -64,7 +64,8 @@ async def _api_request(base_url: str,
         except httpx.HTTPStatusError as e:
             if e.response.status_code in (401, 403):
                 return BaseResult(error="Invalid credentials")
-            raise
+            data = e.response.json()
+            return BaseResult(error=str(data.get("error")))
 
 # Thin wrappers
 async def bzm_api_request(token: Optional[BzmToken], method: str, endpoint: str,

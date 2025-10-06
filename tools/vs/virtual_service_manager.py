@@ -153,8 +153,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 name (str): Mandatory. The name of the virtual service.
                 serviceId (int): Mandatory. The id of the service to create the virtual service in.
                 type (str): Mandatory. The type of the virtual service.
-                harborId (str): Mandatory. The blazemeter location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
-                shipId (str): Mandatory. The blazemeter location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
+                harborId (str): Mandatory. The location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
+                shipId (str): Mandatory. The location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
                 replicas (int): Mandatory. Always set to 1.
                 endpointPreference (str): Mandatory. If not specified use 'HTTPS'.
                 noMatchingRequestPreference (str): Mandatory. If not specified use 'return404'.

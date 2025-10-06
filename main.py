@@ -68,6 +68,7 @@ def run(log_level: str = "DEBUG"):
         - Dependencies:
             accounts: It doesn't depend on anyone. In user you can access which is the default account, and in the list of accounts, you can see the accounts available to the user.
             workspaces: Workspaces belong to a particular account.
+            locations: Locations belong to a particular workspace.
             services: Services belong to a particular workspace.
             transactions: Transactions belong to a particular service.
             virtual services: Virtual Services belong to a particular service.

@@ -7,6 +7,7 @@ from config.blazemeter import VS_SERVICES_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOL
 from config.token import BzmToken
 from formatters.service import format_services
 from models.result import BaseResult
+from models.vs.service import Service
 from tools.utils import vs_api_request
 
 
@@ -70,7 +71,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 service_name (str): Mandatory. The required name of the service to create.
                 workspace_id (int): Mandatory. The id of the workspace to create service in.
-    """
+        Service Schema:
+        """ + str(Service.model_json_schema())
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         service_manager = ServiceManager(token, ctx)

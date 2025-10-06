@@ -7,6 +7,7 @@ from config.blazemeter import VS_LOCATIONS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOO
 from config.token import BzmToken
 from formatters.location import format_locations
 from models.result import BaseResult
+from models.vs.location import Location
 from tools.utils import vs_api_request
 
 
@@ -40,7 +41,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         - list: List all locations. 
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list locations from.
-    """
+        Location Schema:
+        """ + str(Location.model_json_schema())
     )
     async def location(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         location_manager = LocationManager(token, ctx)

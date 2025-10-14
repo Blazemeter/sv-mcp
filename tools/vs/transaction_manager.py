@@ -286,6 +286,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             request.host → Host header
             request.port → Port number
             request.absoluteUrl → Full URL with host/port
+            # --- Available Http Call Action Templates ---
+            httpcalls.actionName.response.body → Response body of the http call action named "actionName"
+            httpcalls.actionName.response.statuscode → Status code of the http call action named "actionName"
+            httpcalls.actionName.request.url → Request URL of the http call action named "actionName"
+            httpcalls.actionName.request.method → Request method of the http call action named "actionName
+            httpcalls.actionName.request.headers → Request headers of the http call action named "actionName"
+            httpcalls.actionName.request.body → Request body of the http call action named "actionName
+            
             # --- Error Handling Notes ---
             If the response returns raw unparsed template text (for example, showing {{request.method}} instead of the actual value), it means the template syntax is **invalid or malformed** and WireMock skipped template parsing.  
             If the response returns **HTTP 500** with an exception in the WireMock logs, it means the syntax was **parsed correctly but failed during runtime execution** (for example, referencing a non-existent variable, invalid JSONPath, or invalid helper argument).

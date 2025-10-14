@@ -15,6 +15,7 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
                 type=vs.get("type"),
                 harborId=vs.get("harborId"),
                 shipId=vs.get("shipId"),
+                configurationId=vs.get("configurationId", None),
                 noMatchingRequestPreference=vs.get("noMatchingRequestPreference"),
                 endpointPreference=vs.get("endpointPreference"),
                 replicas=vs.get("replicas"),

@@ -1,6 +1,7 @@
 import base64
 import traceback
 from typing import Optional, Dict, Any, Annotated
+
 import httpx
 from mcp.server.fastmcp import Context
 
@@ -293,6 +294,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             httpcalls.actionName.request.method → Request method of the http call action named "actionName
             httpcalls.actionName.request.headers → Request headers of the http call action named "actionName"
             httpcalls.actionName.request.body → Request body of the http call action named "actionName
+             # --- Available Virtual Service Configuration Templates ---
+            config.var1 → Value of the virtual service configuration parameter named "var1"
             
             # --- Error Handling Notes ---
             If the response returns raw unparsed template text (for example, showing {{request.method}} instead of the actual value), it means the template syntax is **invalid or malformed** and WireMock skipped template parsing.  

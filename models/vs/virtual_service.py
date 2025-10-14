@@ -26,6 +26,7 @@ class VirtualService(BaseModel):
     )
     harborId: str = Field(..., description="Location harbor identifier")
     shipId: str = Field(..., description="Location ship identifier")
+    configurationId: Optional[int] = Field(None, description="Configuration identifier")
     noMatchingRequestPreference: str = Field(
         ...,
         description=(

@@ -71,16 +71,19 @@ def run(log_level: str = "DEBUG"):
             locations: Locations belong to a particular workspace.
             services: Services belong to a particular workspace.
             transactions: Transactions belong to a particular service.
+            actions: Actions belong to a particular service.
             virtual services: Virtual Services belong to a particular service.
         Important: 
             Use the user’s activeWorkspaceId from from user object for workspace_id in all api calls, where it is required
             unless user requested a specific workspace.
     """
-    # mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level))
     # for http client tests
-    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level), stateless_http=True)
+    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level),
+                  stateless_http=True)
+    # mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")
     register_tools(mcp, token)
     mcp.run(transport="streamable-http")
+    # mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":
@@ -100,7 +103,7 @@ if __name__ == "__main__":
 
     parser.add_argument(
         "--log-level",
-        default="CRITICAL",  # By default, only critical errors
+        default="DEBUG",  # By default, only critical errors
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level (default: CRITICAL = critical errors only)"
     )
@@ -111,16 +114,15 @@ if __name__ == "__main__":
     if args.mcp:
         run(log_level=args.log_level.upper())
     else:
+        logo_ascii = rf"""
+          ____  _                __  __      _            
+         | __ )| | __ _ _______ |  \/  | ___| |_ ___ _ __ 
+         |  _ \| |/ _` |_  / _ \| .  . |/ _ \ __/ _ \ '__|
+         | |_) | | (_| |/ /  __/| |\/| |  __/ ||  __/ |   
+         |____/|_|\__,_/___\___||_|  |_|\___|\__\___|_|   
 
-        logo_ascii = (
-            "  ____  _                __  __      _            \n"
-            " | __ )| | __ _ _______ |  \/  | ___| |_ ___ _ __ \n"
-            " |  _ \| |/ _` |_  / _ \| .  . |/ _ \ __/ _ \ '__|\n"
-            " | |_) | | (_| |/ /  __/| |\/| |  __/ ||  __/ |   \n"
-            " |____/|_|\__,_/___\___||_|  |_|\___|\__\___|_|   \n"
-            "                                                    \n"
-            f" BlazeMeter MCP Server v{__version__} \n"
-        )
+         BlazeMeter Virtual Services MCP Server v{__version__}
+        """
         print(logo_ascii)
 
         config_dict = {

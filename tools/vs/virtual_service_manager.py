@@ -1,5 +1,6 @@
 import traceback
 from typing import Optional, Annotated, Dict, Any, List
+
 import httpx
 from mcp.server.fastmcp import Context
 
@@ -118,6 +119,7 @@ class VirtualServiceManager:
             result_formatter=format_virtual_services,
             json=vs_body
         )
+
     async def unassign_transactions(self, workspace_id: int, id: int, transaction_ids: List[int]) -> BaseResult:
         vs_body = {
             "excludeIds": transaction_ids
@@ -129,6 +131,19 @@ class VirtualServiceManager:
             result_formatter=format_virtual_services,
             json=vs_body
         )
+
+    async def assign_configuration(self, workspace_id: int, id: int, configuration_id: int) -> BaseResult:
+        vs_body = {
+            "configurationId": configuration_id
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}",
+            result_formatter=format_virtual_services,
+            json=vs_body
+        )
+
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -194,6 +209,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
                 id (int): Mandatory. The id of the virtual service to assign the transaction to.
                 transaction_ids (list[int]): Mandatory. The ids of the transactions to unassign from the virtual service.
+        - assign_configuration: Assigns the configuration to the virtual service. To unassign configuration, assign configuration with id None.
+            args(dict): Dictionary with the following required parameters:
+                workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
+                id (int): Mandatory. The id of the virtual service to assign the transaction to.
+                configuration_id (list[int]): Mandatory. The id of the configuration to assign to the virtual service.
         VirtualService Schema (including full MockServiceTransaction):
         """ + str(VirtualService.model_json_schema()) + """
         Virtual service deploy/stop/update/delete actions result schema:
@@ -259,6 +279,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "unassign_transactions":
                     return await vs_manager.unassign_transactions(
                         args["workspace_id"], args["id"], args["transaction_ids"]
+                    )
+                case "assign_configuration":
+                    return await vs_manager.assign_configuration(
+                        args["workspace_id"], args["id"], args["configuration_id"]
                     )
                 case _:
                     return BaseResult(

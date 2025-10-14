@@ -11,6 +11,7 @@ from tools.vs.tracking_manager import register as register_tracking_manager
 from tools.vs.location_manager import register as register_location_manager
 from tools.vs.sandbox_manager import register as register_sandbox_manager
 from tools.vs.action_manager import register as register_action_manager
+from tools.vs.configuration_manager import register as register_configuration_manager
 from config.token import BzmToken
 from typing import Optional
 
@@ -33,3 +34,4 @@ def register_tools(mcp, token: Optional[BzmToken]):
     register_location_manager(mcp, token)
     register_sandbox_manager(mcp, token)
     register_action_manager(mcp, token)
+    register_configuration_manager(mcp, token)

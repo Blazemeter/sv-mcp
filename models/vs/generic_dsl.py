@@ -1,6 +1,8 @@
 from pydantic import BaseModel, Field
+
 from models.vs.request_dsl import RequestDsl
 from models.vs.response_dsl import ResponseDsl
+
 
 class GenericDsl(BaseModel):
     requestDsl: RequestDsl = Field(

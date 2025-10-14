@@ -1,6 +1,9 @@
 from typing import Optional, List
+
 from pydantic import BaseModel, Field
+
 from models.vs.matcher_dsl import MatcherDsl
+
 
 class RequestDsl(BaseModel):
     method: str = Field(
@@ -9,11 +12,11 @@ class RequestDsl(BaseModel):
     )
     path: str = Field(
         ...,
-        description="Path of the request for the transaction request matching. E.g., '/api/v1/resource'. Used instead of matcher_name for URL matcher definition."
+        description="Mandatory.Path of the request for the transaction request matching. E.g., '/api/v1/resource'. Used instead of matcher_name for URL matcher definition. Important: Should have same value as url.matchingValue.",
     )
     url: MatcherDsl = Field(
         None,
-        description="Matcher definition for the full URL of the request"
+        description="Mandatory. Matcher definition for the full URL of the request"
     )
     headers: Optional[List[MatcherDsl]] = Field(
         [],

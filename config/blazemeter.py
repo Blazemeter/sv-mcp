@@ -1,7 +1,12 @@
-BZM_API_BASE_URL: str = "https://a.blazemeter.com/api/v4"
-VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
+# BZM_API_BASE_URL: str = "https://a.blazemeter.com/api/v4"
+from unittest.loader import VALID_MODULE_NAME
+
+from macholib.mach_o import VAX_SUBTYPE
+
+BZM_API_BASE_URL: str = "https://ci.blazemeter.net/api/v4"
+# VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
+VS_API_BASE_URL: str = "http://localhost:8080/api/v1"
 BZM_BASE_URL: str = "https://a.blazemeter.com/"
-VS_BASE_URL: str = "https://mock.blazemeter.com/"
 TOOLS_PREFIX: str = "blazemeter"
 VS_TOOLS_PREFIX: str = "virtual_services"
 
@@ -17,3 +22,7 @@ VS_TRANSACTIONS_ENDPOINT: str = "transactions"
 VS_LOCATIONS_ENDPOINT: str = "locations"
 VS_ENDPOINT: str = "service-mocks"
 VS_TRACKINGS_ENDPOINT: str = "trackings"
+VS_SANDBOX_ENDPOINT: str = "sandbox"
+VS_ACTIONS_ENDPOINT: str = "actions"
+VS_VALIDATIONS_ENDPOINT: str = "/system/validations/handlebars"
+VS_CONVERT_ENDPOINT: str = "/system/validations/handlebars/convert"

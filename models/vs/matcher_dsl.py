@@ -1,6 +1,9 @@
 from typing import Optional, List
+
 from pydantic import BaseModel, Field
+
 from models.vs.xpath_matcher_namespace import XmlMatcherNamespace
+
 
 class MatcherDsl(BaseModel):
     key: str = Field(
@@ -25,7 +28,6 @@ class MatcherDsl(BaseModel):
         ...,
         description=(
             "Value to match against. Not used for 'absent' matcher_name. "
-            "If used in body matcher, should be correctly base64 encoded."
         )
     )
     optional: bool = Field(

@@ -1,3 +1,4 @@
+import base64
 import traceback
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -43,6 +44,35 @@ class AssetManager:
             params=parameters
         )
 
+    async def set_keystore_passwords(self, workspace_id: int, asset_id: int, keystore_password: str,
+                                     key_passwords: Dict[str, str]) -> BaseResult:
+        encoded_key_passwords = {}
+        if key_passwords is not None:
+            encoded_key_passwords = {
+                key: {
+                    "type": "KEY_PAIR",
+                    "password": (
+                        base64.b64encode((value if value else "").encode("utf-8")).decode("utf-8")
+                    ),
+                    "access_granted": False
+                }
+                for key, value in key_passwords.items()
+            }
+
+        metadata = {
+            "primaryMetadata": {
+                "keystore_password": base64.b64encode(
+                    (keystore_password if keystore_password else "").encode("utf-8")).decode("utf-8"),
+                "aliases": encoded_key_passwords
+            }
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ASSETS_ENDPOINT}/{asset_id}",
+            result_formatter=format_assets,
+            json=metadata)
+
     async def upload(self, workspace_id: int, file_path: str) -> BaseResult:
         try:
             file_path_obj = Path(file_path)
@@ -86,6 +116,12 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace to list services from.
                 limit (int, default=10, valid=[1 to 50]): The number of assets to list.
                 offset (int, default=0): Number of assets to skip.
+        - set_keystore_passwords: Sets keystore password for the keystore asset.
+            args(dict): Dictionary with the following required parameters:
+                workspace_id (int): Mandatory. The id of the workspace to list asset from.
+                asset_id (int): Mandatory. The id of the asset.
+                keystore_password (str): Optional. The keystore password.
+                key_passwords (dict): Optional. The dictionary of key alias x password.
         - upload: Create a new asset from file.
             Action result contains tracking id to track the create asset process. Use tracking tool to track it.
             Creation of the asset is finished, when tracking status is 'FINISHED'. If creation fails, tracking status is 'FAILED'.
@@ -108,6 +144,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                                                      args.get("offset", 0))
                 case "upload":
                     return await assert_manager.upload(args["workspace_id"], args['file_path'])
+                case "set_keystore_passwords":
+                    return await assert_manager.set_keystore_passwords(args["workspace_id"], args['asset_id'],
+                                                                       args["keystore_password"],
+                                                                       args["key_passwords"])
                 case _:
                     return BaseResult(
                         error=f"Asset {action} not found in asset manager tool"

@@ -10,7 +10,8 @@ def format_assets(assets: List[Any], params: Optional[dict] = None) -> List[Asse
             Asset(
                 id=asset.get("id"),
                 name=asset.get("name"),
-                type=asset.get("type")
+                type=asset.get("type"),
+                primaryMetadata=asset.get("primaryMetadata"),
             )
         )
     return formatted_assets

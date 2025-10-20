@@ -61,7 +61,7 @@ async def _api_request(base_url: str,
                 total=total,
                 has_more=(total - (skip + limit)) > 0
             )
-        except httpx.HTTPStatusError as e:
+        except httpx.HTTPError as e:
             if e.response.status_code in (401, 403):
                 return BaseResult(error="Invalid credentials")
             data = e.response.json()

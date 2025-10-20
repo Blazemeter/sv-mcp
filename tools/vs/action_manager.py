@@ -85,7 +85,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                                                                 args["transaction_id"], args["action"])
                 case _:
                     return BaseResult(
-                        error=f"Action {action} not found in service manager tool"
+                        error=f"Action {action} not found in action manager tool"
                     )
         except httpx.HTTPStatusError:
             return BaseResult(

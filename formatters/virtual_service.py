@@ -26,7 +26,7 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
     return formatted_vs
 
 
-def format_virtual_services_action(trackings: List[Any], params: Optional[dict] = None) -> List[VirtualService]:
+def format_virtual_services_action(trackings: List[Any], params: Optional[dict] = None) -> List[ActionResult]:
     action_trackings = []
     for tracking in trackings:
         action_trackings.append(

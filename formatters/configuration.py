@@ -1,10 +1,9 @@
 from typing import (List, Any, Optional)
 
 from models.vs.configuration import Configuration
-from models.vs.service import Service
 
 
-def format_configurations(configurations: List[Any], params: Optional[dict] = None) -> List[Service]:
+def format_configurations(configurations: List[Any], params: Optional[dict] = None) -> List[Configuration]:
     formatted_configurations = []
     for configuration in configurations:
         formatted_configurations.append(

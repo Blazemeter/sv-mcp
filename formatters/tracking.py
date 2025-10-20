@@ -1,10 +1,9 @@
 from typing import (List, Any, Optional)
 
-from models.vs.service import Service
-from models.vs.trackings import MasterTracking, MasterTrackingData
+from models.vs.trackings import MasterTracking, MasterTrackingData, FileUploadTrackingData, FileUploadTracking
 
 
-def format_trackings(trackings: List[Any], params: Optional[dict] = None) -> List[Service]:
+def format_trackings(trackings: List[Any], params: Optional[dict] = None) -> List[MasterTracking]:
     formatted_trackings = []
     for tracking in trackings:
         formatted_trackings.append(
@@ -14,6 +13,21 @@ def format_trackings(trackings: List[Any], params: Optional[dict] = None) -> Lis
                 errors=tracking.get("errors"),
                 warnings=tracking.get("warnings"),
                 data=MasterTrackingData(**tracking.get("data")),
+            )
+        )
+    return formatted_trackings
+
+
+def format_asset_trackings(trackings: List[Any], params: Optional[dict] = None) -> List[MasterTracking]:
+    formatted_trackings = []
+    for tracking in trackings:
+        formatted_trackings.append(
+            FileUploadTracking(
+                trackingId=tracking.get("trackingId"),
+                status=tracking.get("status"),
+                errors=tracking.get("errors"),
+                warnings=tracking.get("warnings"),
+                data=FileUploadTrackingData(**tracking.get("data")),
             )
         )
     return formatted_trackings

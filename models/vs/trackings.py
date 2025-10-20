@@ -54,3 +54,23 @@ class MasterTracking(BaseModel):
 
     class Config:
         extra = "ignore"
+
+
+class FileUploadTrackingData(BaseModel):
+    dataType: str = Field('FILE_UPLOAD', description="Tracking data type. Constant value: 'MASTER_TRACKING'.")
+    assetId: int = Field(None, description="Id of created asset.")
+
+    class Config:
+        extra = "ignore"
+
+
+class FileUploadTracking(BaseModel):
+    trackingId: str = Field(None, description="Tracking id. Must be valid UUID string.")
+    status: str = Field(None,
+                        description="Tracking status. Must be one of the values: 'PENDING', 'RUNNING', 'FINISHED'.")
+    errors: Optional[List[str]] = Field(None, description="List of errors.")
+    warnings: Optional[List[str]] = Field(None, description="List of warnings.")
+    data: Optional[FileUploadTrackingData] = Field(None, description="Asset upload tracking data.")
+
+    class Config:
+        extra = "ignore"

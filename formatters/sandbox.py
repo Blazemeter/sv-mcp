@@ -4,10 +4,9 @@ from models.vs.http_header import HttpHeader
 from models.vs.matching_log_entry import MatchingLogEntry
 from models.vs.sandbox import Sandbox
 from models.vs.sandbox_response import SandboxResponse
-from models.vs.service import Service
 
 
-def format_sandbox_test_request(responses: List[Any], params: Optional[dict] = None) -> List[Service]:
+def format_sandbox_test_request(responses: List[Any], params: Optional[dict] = None) -> List[SandboxResponse]:
     formatted_sandbox_responses = []
     for response in responses:
         formatted_sandbox_responses.append(
@@ -22,7 +21,7 @@ def format_sandbox_test_request(responses: List[Any], params: Optional[dict] = N
     return formatted_sandbox_responses
 
 
-def format_sandbox(responses: List[Any], params: Optional[dict] = None) -> List[Service]:
+def format_sandbox(responses: List[Any], params: Optional[dict] = None) -> List[Sandbox]:
     formatted_sandbox = []
     for response in responses:
         formatted_sandbox.append(

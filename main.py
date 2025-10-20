@@ -78,12 +78,12 @@ def run(log_level: str = "DEBUG"):
             unless user requested a specific workspace.
     """
     # for http client tests
-    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level),
-                  stateless_http=True)
-    # mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")
+    # mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level),
+    #               stateless_http=True)
+    mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")
     register_tools(mcp, token)
-    mcp.run(transport="streamable-http")
-    # mcp.run(transport="stdio")
+    # mcp.run(transport="streamable-http")
+    mcp.run(transport="stdio")
 
 
 if __name__ == "__main__":

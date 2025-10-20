@@ -1,10 +1,9 @@
 from typing import (List, Any, Optional)
 
 from models.vs.location import Location
-from models.vs.service import Service
 
 
-def format_locations(locations: List[Any], params: Optional[dict] = None) -> List[Service]:
+def format_locations(locations: List[Any], params: Optional[dict] = None) -> List[Location]:
     formatted_locations = []
     for location in locations:
         formatted_locations.append(

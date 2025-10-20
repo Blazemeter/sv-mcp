@@ -1,6 +1,6 @@
 import base64
 import traceback
-from typing import Optional, Dict, Any, Annotated
+from typing import Optional, Dict, Any, Annotated, assert_type
 
 import httpx
 from mcp.server.fastmcp import Context
@@ -85,7 +85,7 @@ class TransactionManager:
         transaction_body = {
             "id": id,
             "type": type,
-            "dsl": dsl_dict,  # Use the dict version
+            "dsl": dsl_dict,
             "name": transaction_name
         }
         return await vs_api_request(
@@ -94,6 +94,20 @@ class TransactionManager:
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}",
             result_formatter=format_transactions,
             json=transaction_body
+        )
+
+    async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
+        assert_type_body = {
+            "assetId": assetId,
+            "usageType": type,
+            "alias": alias
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}/assign-asset",
+            result_formatter=format_transactions,
+            json=assert_type_body
         )
 
     async def validate_template(self, template: str) -> BaseResult:
@@ -137,6 +151,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         Operations on transactions. 
         Use this when a user needs to create or select a transaction.
       1. General Rules:
+            - If redirect url is required in transaction creation or update, provide it as a redirectUrl field in dsl, 
+            not as a matcher.
             - Assign intermediate values with {{#assign "varName"}}{{value}}{{/assign}}.
             - Keep JSON objects outside helper calls; helpers should only produce values.
             - Do not nest helpers more than 1–2 levels deep.
@@ -335,11 +351,22 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             Important: before using template in transaction definition validate it and  
             convert it first using validate_template and convert_template actions.
             args(Transaction): A Transaction object with the following fields:
-                id (str): Mandatory. The id of the transaction.
+                id (int): Mandatory. The id of the transaction.
                 name (str): Mandatory. The new name of the transaction.
                 type (str): Mandatory. The type of the transaction.
                 dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
-                workspace_id (int): Mandatory. The id of the workspace.        
+                workspace_id (int): Mandatory. The id of the workspace. 
+        - assign_keystore: Assign keystore asset to the transaction.
+            args(dict):
+                id (int): Mandatory. The id of the transaction.
+                asset_id (int): Mandatory. The id of the keystore asset to assign.
+                alias (str): Mandatory. The certificate alias to use.
+                workspace_id (int): Mandatory. The id of the workspace.  
+        - assign_certificate: Assign certificate asset to the transaction.
+            args(dict):
+                id (int): Mandatory. The id of the transaction.
+                asset_id (int): Mandatory. The id of the certificate asset to assign.
+                workspace_id (int): Mandatory. The id of the workspace.           
 
         Transaction Schema (including full GenericDsl with RequestDsl and ResponseDsl):
         """ + str(Transaction.model_json_schema())
@@ -362,41 +389,41 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args.get("offset", 0)
                     )
                 case "create":
-                    # Create Transaction object from args
-                    transaction_data = Transaction(
-                        id=args.get("id", 0),  # Default id for creation
-                        name=args["name"],
-                        serviceId=args["serviceId"],
-                        type=args["type"],
-                        dsl=args["dsl"]
-                    )
-
                     return await transaction_manager.create(
-                        transaction_data.name,
+                        args["name"],
                         args["workspace_id"],
-                        transaction_data.serviceId,
-                        transaction_data.type,
-                        transaction_data.dsl
+                        args["serviceId"],
+                        args["type"],
+                        args["dsl"]
                     )
                 case "update":
-                    transaction_data = Transaction(
-                        id=args["id"],
-                        name=args["name"],
-                        type=args["type"],
-                        dsl=args["dsl"]
-                    )
-
                     return await transaction_manager.update(
                         args["id"],
-                        transaction_data.name,
+                        args["name"],
                         args["workspace_id"],
-                        transaction_data.type,
-                        transaction_data.dsl
+                        args["type"],
+                        args["dsl"]
                     )
                 case "validate_template":
                     return await transaction_manager.validate_template(args["template"])
                 case "convert_template":
                     return await transaction_manager.convert_template(args["template"])
+                case "assign_keystore":
+                    return await transaction_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "CLIENT_KEYSTORE_TRUSTSTORE",
+                        args["asset_id"],
+                        args["alias"],
+                    )
+                case "assign_certificate":
+                    return await transaction_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "CLIENT_TRUSTSTORE_CERT",
+                        args["asset_id"],
+                        None,
+                    )
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in transaction manager tool"

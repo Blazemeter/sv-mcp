@@ -1,7 +1,8 @@
-from typing import Optional
+from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
+from models.vs.assigned_asset import AssignedAsset
 from models.vs.generic_dsl import GenericDsl
 
 
@@ -19,6 +20,7 @@ class Transaction(BaseModel):
         )
     )
     dsl: GenericDsl = Field(..., description="Transaction DSL")
+    assets: Optional[List[AssignedAsset]] = Field(None, description="List of assets")
 
     class Config:
         extra = "ignore"

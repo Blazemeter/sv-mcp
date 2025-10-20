@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 from models.vs.request_dsl import RequestDsl
@@ -12,6 +14,10 @@ class GenericDsl(BaseModel):
     responseDsl: ResponseDsl = Field(
         ...,
         description="Response DSL for the transaction response matching"
+    )
+    redirectUrl: Optional[str] = Field(
+        None,
+        description="Redirect URL for the transaction"
     )
 
     class Config:

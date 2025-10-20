@@ -8,7 +8,9 @@ def format_actions(actions: List[Any], params: Optional[dict] = None) -> List[Ac
     for action in actions:
         formatted_actions.append(
             Action(
-                name=action.get("name", "Unknown")
+                id=action.get("id"),
+                name=action.get("name", "Unknown"),
+                assets=action.get("assets", []),
             )
         )
     return formatted_actions

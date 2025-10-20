@@ -50,6 +50,21 @@ class ActionManager:
             json=action_body
         )
 
+    async def assign_asset(self, id: int, transaction_id: int, workspace_id: int, type: str, assetId: int,
+                           alias: str) -> BaseResult:
+        assert_type_body = {
+            "assetId": assetId,
+            "usageType": type,
+            "alias": alias
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{transaction_id}/{VS_ACTIONS_ENDPOINT}/{id}/assign-asset",
+            result_formatter=format_actions,
+            json=assert_type_body
+        )
+
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -70,6 +85,19 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace to list services from.
                 transaction_id (int): Mandatory. The id of the transaction.
                 action (WebAction): Mandatory. The action definition. See WebAction schema below.
+        - assign_keystore: Assign keystore asset to the action.
+            args(dict):
+                id (int): Mandatory. The id of the action.
+                transaction_id (int): Mandatory. The id of the transaction.
+                asset_id (int): Mandatory. The id of the keystore asset to assign.
+                alias (str): Mandatory. The certificate alias to use.
+                workspace_id (int): Mandatory. The id of the workspace.  
+        - assign_certificate: Assign certificate asset to the action.
+            args(dict):
+                id (int): Mandatory. The id of the action.
+                transaction_id (int): Mandatory. The id of the transaction.
+                asset_id (int): Mandatory. The id of the certificate asset to assign.
+                workspace_id (int): Mandatory. The id of the workspace.                      
         Action Schema:
         """ + str(WebAction.model_json_schema())
     )
@@ -83,6 +111,23 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "create_web_hook":
                     return await action_manager.create_web_hook(args["action_name"], args["workspace_id"],
                                                                 args["transaction_id"], args["action"])
+                case "assign_keystore":
+                    return await action_manager.assign_asset(
+                        args["id"],
+                        args["transaction_id"],
+                        args["workspace_id"],
+                        "CLIENT_KEYSTORE_TRUSTSTORE",
+                        args["asset_id"],
+                        args["alias"],
+                    )
+                case "assign_certificate":
+                    return await action_manager.assign_asset(
+                        args["id"],
+                        args["transaction_id"],
+                        args["workspace_id"],
+                        "CLIENT_TRUSTSTORE_CERT",
+                        args["asset_id"],
+                        None)
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in action manager tool"

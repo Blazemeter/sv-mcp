@@ -2,7 +2,8 @@ from tools.user_manager import register as register_user_manager
 from tools.workspace_manager import register as register_workspace_manager
 from tools.account_manager import register as register_account_manager
 from tools.vs.service_manager import register as register_service_manager
-from tools.vs.transaction_manager import register as register_transaction_manager
+from tools.vs.http_transaction_manager import register as http_register_transaction_manager
+from tools.vs.messaging_transaction_manager import register as messaging_register_transaction_manager
 from tools.vs.virtual_service_manager import register as register_virtual_service_manager
 from tools.vs.tracking_manager import register as register_tracking_manager
 from tools.vs.asset_tracking_manager import register as register_asset_tracking_manager
@@ -13,6 +14,7 @@ from tools.vs.configuration_manager import register as register_configuration_ma
 from tools.vs.asset_manager import register as register_asset_manager
 from config.token import BzmToken
 from typing import Optional
+
 
 def register_tools(mcp, token: Optional[BzmToken]):
     """
@@ -27,7 +29,8 @@ def register_tools(mcp, token: Optional[BzmToken]):
     register_account_manager(mcp, token)
     # register vs tools
     register_service_manager(mcp, token)
-    register_transaction_manager(mcp, token)
+    http_register_transaction_manager(mcp, token)
+    messaging_register_transaction_manager(mcp, token)
     register_virtual_service_manager(mcp, token)
     register_tracking_manager(mcp, token)
     register_asset_tracking_manager(mcp, token)

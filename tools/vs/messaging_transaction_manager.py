@@ -1,6 +1,6 @@
 import base64
 import traceback
-from typing import Optional, Dict, Any, Annotated, assert_type
+from typing import Optional, Dict, Any, Annotated
 
 import httpx
 from mcp.server.fastmcp import Context
@@ -8,15 +8,14 @@ from mcp.server.fastmcp import Context
 from config.blazemeter import VS_TRANSACTIONS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX, VS_VALIDATIONS_ENDPOINT, \
     VS_CONVERT_ENDPOINT
 from config.token import BzmToken
-from formatters.transaction import format_transactions
+from formatters.transaction import format_messaging_transactions
 from formatters.validations import format_validation_request
 from models.result import BaseResult
-from models.vs.generic_dsl import GenericDsl
-from models.vs.transaction import Transaction
+from models.vs.messaging_transaction import MessagingTransaction
 from tools.utils import vs_api_request
 
 
-class TransactionManager:
+class MessagingTransactionManager:
 
     def __init__(self, token: Optional[BzmToken], ctx: Context):
         self.token = token
@@ -27,13 +26,14 @@ class TransactionManager:
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{transaction_id}",
-            result_formatter=format_transactions
+            result_formatter=format_messaging_transactions
         )
 
     async def list(self, workspace_id: int, service_id: int, limit: int = 50, offset: int = 0) -> BaseResult:
         parameters = {
             "limit": limit,
-            "skip": offset
+            "skip": offset,
+            "type": "MESSAGING"
         }
         if service_id is not None:
             parameters["serviceId"] = service_id
@@ -41,20 +41,27 @@ class TransactionManager:
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}",
-            result_formatter=format_transactions,
+            result_formatter=format_messaging_transactions,
             params=parameters)
 
     async def create(self, transaction_name: str, workspace_id: int, service_id, type: str,
-                     dsl: GenericDsl) -> BaseResult:
-        # Convert GenericDsl to dict for JSON serialization
-        dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+                     dsl: MessagingTransaction, delay: int) -> BaseResult:
+        # Convert MessagingDsl to dict for JSON serialization
+        dsl_dict = dsl.model_dump() if isinstance(dsl, MessagingTransaction) else dsl
         request = dsl_dict.get("requestDsl")
         if request:
             body_list = request.get("body", [])
             for body_matcher in body_list:
                 value = body_matcher.get("matchingValue")
                 if value is not None:
-                    body_matcher["matchingValue"] = TransactionManager.to_base64(value)
+                    body_matcher["matchingValue"] = MessagingTransactionManager.to_base64(value)
+        if delay:
+            response = dsl_dict.get("responseDsl")
+            if response:
+                response["responseDelay"] = {
+                    "type": "FIXED",
+                    "duration": delay
+                }
         transaction_body = {
             "transactions": [
                 {
@@ -72,15 +79,15 @@ class TransactionManager:
             self.token,
             "POST",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}",
-            result_formatter=format_transactions,
+            result_formatter=format_messaging_transactions,
             json=transaction_body,
             params=parameters
         )
 
     async def update(self, id: int, transaction_name: str, workspace_id: int, type: str,
-                     dsl: GenericDsl) -> BaseResult:
-        # Convert GenericDsl to dict for JSON serialization
-        dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+                     dsl: MessagingTransaction, delay: int) -> BaseResult:
+        # Convert MessagingDsl to dict for JSON serialization
+        dsl_dict = dsl.model_dump() if isinstance(dsl, MessagingTransaction) else dsl
 
         transaction_body = {
             "id": id,
@@ -92,7 +99,7 @@ class TransactionManager:
             self.token,
             "PUT",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}",
-            result_formatter=format_transactions,
+            result_formatter=format_messaging_transactions,
             json=transaction_body
         )
 
@@ -106,7 +113,7 @@ class TransactionManager:
             self.token,
             "PATCH",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}/assign-asset",
-            result_formatter=format_transactions,
+            result_formatter=format_messaging_transactions,
             json=assert_type_body
         )
 
@@ -146,13 +153,21 @@ class TransactionManager:
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
-        name=f"{VS_TOOLS_PREFIX}_transaction",
+        name=f"{VS_TOOLS_PREFIX}_messaging_transaction",
         description="""
-        Operations on transactions. 
-        Use this when a user needs to create or select a transaction.
+        Operations on JMS Messaging transactions. 
+        Use this when a user needs to create or select a JMS messaging transaction.
+        DSL type field is mandatory and must be set to "MESSAGING".
       1. General Rules:
-            - If redirect url is required in transaction creation or update, provide it as a redirectUrl field in dsl, 
-            not as a matcher.
+            - Supported JMS header names: 'MQ9_MQMD_VERSION', 'MQ9_MQMD_REPORT', 'MQ9_MQMD_MESSAGE_TYPE', 
+                'MQ9_MQMD_EXPIRY', 'MQ9_MQMD_FEEDBACK', 'MQ9_MQMD_ENCODING', 'MQ9_MQMD_CHARACTER_SET', 
+                'MQ9_MQMD_PRIORITY', 'MQ9_MQMD_PERSISTENCE', 'MQ9_MQMD_MESSAGE_ID', 'MQ9_MQMD_CORRELATION_ID', 
+                'MQ9_MQMD_BACKOUT_COUNT', 'MQ9_MQMD_USER_ID', 'MQ9_MQMD_ACCOUNTING_TOKEN', 'MQ9_MQMD_APPLICATION_ID', 
+                'MQ9_PUT_APPLICATION_TYPE', 'MQ9_PUT_APPLICATION_NAME', 'MQ9_PUT_DATE_TIME', 
+                'MQ9_MQMD_APPLICATION_ORIGIN_DATA', 'MQ9_MQMD_GROUP_ID', 'MQ9_MQMD_SEQUENCE_NUMBER', 
+                'MQ9_MQMD_OFFSET', 'MQ9_MQMD_FLAGS', 'MQ9_MQMD_ORIGINAL_LENGTH', 'JMS_MESSAGE_ID', 
+                'JMS_CORRELATION_ID', 'JMS_TIMESTAMP', 'JMS_DELIVERY_MODE', 'JMS_REDELIVERED', 
+                'JMS_EXPIRATION', 'JMS_PRIORITY'
             - Assign intermediate values with {{#assign "varName"}}{{value}}{{/assign}}.
             - Keep JSON objects outside helper calls; helpers should only produce values.
             - Do not nest helpers more than 1–2 levels deep.
@@ -189,32 +204,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             {{#assign 'operation'}}{{join request.method request.url ' '}}{{/assign}}
             Result: {{operation}}
             
-            # --- Accessing Request Parts ---
-            Method: {{request.method}}
-            URL: {{request.url}}
-            Absolute URL: {{request.absoluteUrl}}
-            Path: {{request.path}}
-            First path segment: {{request.path.1}}
-            Host: {{request.host}}
-            Port: {{request.port}}
-            Base URL: {{request.baseUrl}}
-            Scheme: {{request.scheme}}
-            Client IP: {{request.clientIp}}
-            Logged Date: {{request.loggedDate}}
-            Logged Date Instant: {{request.loggedDateInstant}}
-            
-            # --- Query Parameters ---
-            Query all: {{request.query}}
-            Query 'status': {{request.query.status}}
-            First value: {{request.query.status.0}}
-            With default fallback:
-            {{val request.query.type or='none' assign='queryType'}}
-            Query type: {{queryType}}
-            
             # --- Headers ---
             All headers: {{request.headers}}
-            Single header: {{request.headers.Content-Type}}
-            First header value: {{request.headers.Content-Type.0}}
+            Single header: {{request.headers.JMS_CORRELATION_ID}}
             Iterate headers:
             {{#each request.headers as |hdr|}}
             {{hdr.name}}: {{hdr.value}}
@@ -232,10 +224,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             Extracted ID: {{id}}
             
             # --- Conditional Logic ---
-            {{#eq request.query.status 'pending'}}
+            {{#eq request.headers.JMS_CORRELATION_ID '1234'}}
             Order is pending
             {{else}}
-            Order status: {{request.query.status}}
+            Order status: {{request.headers.STATUS}}
             {{/eq}}
             
             # --- Arrays and Ranges ---
@@ -257,7 +249,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             {{lower user.role}}
             {{capitalize 'hello world'}}
             {{capitalizeFirst 'wiremock templates'}}
-            {{defaultIfEmpty request.query.comment 'none'}}
+            {{defaultIfEmpty request.headers.comment 'none'}}
             {{cut 'a,b,c' ','}}
             {{slugify 'Hello World!'}}
             {{stripTags '<b>bold</b>'}}
@@ -273,7 +265,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             {{#assign 'qty'}}{{jsonPath request.body '$.quantity'}}{{/assign}}
             {{#assign 'total'}}{{math price '*' qty}}{{/assign}}
             Total: {{total}}
-            Item count: {{size request.query.items}}
+            Item count: {{size request.headers.items}}
             
             # --- Regex Extraction ---
             {{#assign 'num'}}{{regexExtract request.path.1 '([0-9]+)'}}{{/assign}}
@@ -285,24 +277,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             {{/with}}
             
             # --- Available Request Parts Summary ---
-            request.method → HTTP method (GET, POST, etc.)
-            request.url → Path + query string
-            request.path → Path only
-            request.path.N → Path segment by index
-            request.baseUrl → Full base URL
-            request.query → Map of query parameters
-            request.query.NAME → Value(s) of query param
             request.headers → Map of headers
             request.headers.NAME → Header value(s)
+            request.properties → Map of headers
+            request.properties.NAME → Header value(s)
             request.body → Raw request body (string)
-            request.bodyAsBase64 → Body as Base64 string
-            request.clientIp → Request origin IP
-            request.loggedDate → Timestamp (long)
-            request.loggedDateInstant → ISO timestamp
-            request.scheme → http / https
-            request.host → Host header
-            request.port → Port number
-            request.absoluteUrl → Full URL with host/port
             # --- Available Http Call Action Templates ---
             httpcalls.actionName.response.body → Response body of the http call action named "actionName"
             httpcalls.actionName.response.statuscode → Status code of the http call action named "actionName"
@@ -314,7 +293,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             config.var1 → Value of the virtual service configuration parameter named "var1"
             
             # --- Error Handling Notes ---
-            If the response returns raw unparsed template text (for example, showing {{request.method}} instead of the actual value), it means the template syntax is **invalid or malformed** and WireMock skipped template parsing.  
+            If the response returns raw unparsed template text (for example, showing {{request.body}} instead of the actual value), it means the template syntax is **invalid or malformed** and WireMock skipped template parsing.  
             If the response returns **HTTP 500** with an exception in the WireMock logs, it means the syntax was **parsed correctly but failed during runtime execution** (for example, referencing a non-existent variable, invalid JSONPath, or invalid helper argument).
             # --- Important Notes ---
             Each helper must always be opened and closed when block form is used (e.g. {{#assign ...}}{{/assign}}, {{#eq ...}}{{/eq}}, {{#each ...}}{{/each}}).  
@@ -345,8 +324,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 name (str): Mandatory. The name of the transaction.
                 serviceId (int): Mandatory. The id of the service to create the transaction in.
                 type (str): Mandatory. The type of the transaction.
-                dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
+                dsl (MessagingDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace.
+                delay (int): Optional. Response delay in milliseconds.
         - update: Updates a certain transaction.
             Important: before using template in transaction definition validate it and  
             convert it first using validate_template and convert_template actions.
@@ -354,8 +334,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 id (int): Mandatory. The id of the transaction.
                 name (str): Mandatory. The new name of the transaction.
                 type (str): Mandatory. The type of the transaction.
-                dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
+                dsl (MessagingDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace. 
+                delay (int): Optional. Response delay in milliseconds.
         - assign_keystore: Assign keystore asset to the transaction.
             args(dict):
                 id (int): Mandatory. The id of the transaction.
@@ -368,15 +349,15 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 asset_id (int): Mandatory. The id of the certificate asset to assign.
                 workspace_id (int): Mandatory. The id of the workspace.           
 
-        Transaction Schema (including full GenericDsl with RequestDsl and ResponseDsl):
-        """ + str(Transaction.model_json_schema())
+        Transaction Schema (including full MessagingDsl with MessagingRequestDsl and MessagingResponseDsl):
+        """ + str(MessagingTransaction.model_json_schema())
     )
     async def transaction(
             action: str,
-            args: Annotated[Dict[str, Any], Transaction.model_json_schema()],
+            args: Annotated[Dict[str, Any], MessagingTransaction.model_json_schema()],
             ctx: Context
     ) -> BaseResult:
-        transaction_manager = TransactionManager(token, ctx)
+        transaction_manager = MessagingTransactionManager(token, ctx)
         try:
             match action:
                 case "read":
@@ -394,7 +375,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["workspace_id"],
                         args["serviceId"],
                         args["type"],
-                        args["dsl"]
+                        args["dsl"],
+                        args.get("delay", None),
                     )
                 case "update":
                     return await transaction_manager.update(
@@ -402,7 +384,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["name"],
                         args["workspace_id"],
                         args["type"],
-                        args["dsl"]
+                        args["dsl"],
+                        args.get("delay", None),
                     )
                 case "validate_template":
                     return await transaction_manager.validate_template(args["template"])

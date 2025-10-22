@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 from models.vs.http_header import HttpHeader
+from models.vs.status_code_condition import StatusCodeCondition
 
 
 class ResponseDsl(BaseModel):
@@ -18,6 +19,8 @@ class ResponseDsl(BaseModel):
         None,
         description="Base64 encoded body of the response"
     )
+    statusCodeConditions: Optional[List[StatusCodeCondition]] = Field([],
+                                                                      description="Status code conditions for the response")
 
     class Config:
         extra = "allow"

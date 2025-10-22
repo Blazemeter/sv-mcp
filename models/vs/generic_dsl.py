@@ -19,6 +19,6 @@ class GenericDsl(BaseModel):
         None,
         description="Redirect URL for the transaction"
     )
-
+    type: str = Field("HTTP", description="The type of the transaction. Supported value is 'HTTP'.")
     class Config:
         extra = "allow"

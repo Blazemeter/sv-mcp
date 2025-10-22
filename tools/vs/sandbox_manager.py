@@ -48,8 +48,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_sandbox",
         description="""
-        Testing transactions in sandbox. 
-        Use this for transaction verification.
+        Testing HTTP transactions in sandbox. 
+        Use this for HTTP transaction verification.
+        MESSAGING transactions are not supported in sandbox.
         Actions:
         - init: Places transaction into sandbox.
             args(dict): Dictionary with the following required parameters:

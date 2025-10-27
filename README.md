@@ -1,17 +1,19 @@
 # BlazeMeter MCP Server
 
-The BlazeMeter MCP Server connects AI tools directly to BlazeMeter's cloud-based performance testing platform. This gives AI agents, assistants, and chatbots the ability to manage complete load testing workflows from creation to execution and reporting. All through natural language interactions.
+The BlazeMeter Virtual Services MCP Server connects AI tools directly to BlazeMeter's Virtual Services platform. 
+This gives AI agents, assistants, and chatbots the ability to manage complete workflows from creation of transactions 
+to deploying it to the virtual service. All through natural language interactions.
 
 ## Use Cases
 
-- **Performance Test Management**: Create, configure, and manage performance tests with automated script uploads and asset management.
-- **Test Execution & Monitoring**: Start tests, monitor execution status, and retrieve comprehensive reports including summary, errors, and request statistics.
-- **Workspace & Project Organization**: Navigate through accounts, workspaces, and projects to organize your testing infrastructure.
-- **Load Configuration**: Configure test parameters including concurrency, iterations, duration, ramp-up settings, and geographic distribution.
-- **Report Analysis**: Access detailed execution reports, error analysis, and performance metrics for comprehensive test insights.
-- **Account & Permission Management**: Manage multiple accounts and workspaces with proper AI consent controls and permission validation.
-
-Built for developers and QA teams who want to connect their AI tools to BlazeMeter's enterprise-grade performance testing capabilities, from simple test creation to complex multi-step automation workflows.
+- **Service Management**: Create and manage services.
+- **Transaction Management**: Create, validate, manage HTTP and Messaging transactions.
+- **Action Management**: Create, validate, manage transaction actions (Http calls and Webhooks).
+- **Asset Management**: Upload assets (certificates and keystores).
+- **Sandbox Management**: Attach HTTP transaction and test it.
+- **Location Management**: List available locations.
+- **Configuration Management**: Create and manage configurations for virtual services.
+- **Virtual Service Management**: Create, modify, deploy, stop a virtual service, track its status.
 
 ---
 
@@ -31,40 +33,27 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
 
 ### **Quick Setup with CLI Tool** ⚡
 
-The easiest way to configure your MCP client is using our interactive CLI tool:
-
-1. **Download the appropriate binary** for your operating system from the [Releases](https://github.com/BlazeMeter/bzm-mcp/releases) page
-
-> [!NOTE]
-> Choose the binary that matches your OS (Windows, macOS, Linux)
-2. **Place the binary** in the same folder as your `api-keys.json` file
-3. **Execute or Double-click the binary** to launch the interactive configuration tool
-4. **The tool automatically generates** the JSON configuration file for you
-
-> [!IMPORTANT]
-> For macOS: You may encounter a security alert saying "Apple could not verify 'bzm-mcp-darwin' is free of malware." To resolve this:
-> 1. Go to **System Settings** → **Privacy & Security** → **Security**
-> 2. Look for the blocked application and click **"Allow Anyway"**
-> 3. Try running the binary again
-
-![CLI Demo](/docs/cli-tool.gif)
-
 <details>
 <summary><strong>Manual Client Configuration (Binary Installation)</strong></summary>
 
-1. **Download the binary** for your operating system from the [Releases](https://github.com/BlazeMeter/bzm-mcp/releases) page
+1. **Build the binary** for your operating system, by running vs_mcp/build.py script
 2. **Configure your MCP client** with the following settings:
 
 ```json
 {
   "mcpServers": {
-    "BlazeMeter MCP": {
-      "command": "/path/to/bzm-mcp-binary",
-      "args": ["--mcp"],
-      "env": {
-        "BLAZEMETER_API_KEY": "/path/to/your/api-key.json"
-      }
-    }
+    "VS MCP": {
+          "disabled": false,
+          "timeout": 60,
+          "type": "stdio",
+          "command": "path to the binary",
+          "args": [
+            "--mcp"
+          ],
+          "env": {
+            "BLAZEMETER_API_KEY": "path to the api-keys.json file"
+          }
+        }
   }
 }
 ```
@@ -77,25 +66,30 @@ The easiest way to configure your MCP client is using our interactive CLI tool:
 
 The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through six main tools:
 
-| Tool | Purpose | Key Capabilities |
-|------|---------|------------------|
-| **User** | User Information | Get current user details, default account/workspace/project |
-| **Account** | Account Management | List accounts, check AI consent, read account details |
-| **Workspace** | Workspace Management | Manage workspaces, get locations, check billing usage |
-| **Project** | Project Management | Organize projects, get test counts, manage project settings |
-| **Tests** | Test Management | Create, configure, and manage performance tests |
-| **Execution** | Test Execution | Run tests, monitor status, retrieve reports |
+| Tool                      | Purpose                          | Key Capabilities                                            |
+|---------------------------|----------------------------------|-------------------------------------------------------------|
+| **User**                  | Blazemeter User Information      | Get current user details, default account/workspace/project |
+| **Account**               | Blazemeter Account Management    | List accounts, check AI consent, read account details       |
+| **Workspace**             | Blazemeter Workspace Management  | Manage workspaces, get locations, check billing usage       |
+| **Service**               | Service Management               | Create and manage services                                  |
+| **Http Transaction**      | Http Transaction Management      | Create, manage and validate http transactions               |
+| **Messaging Transaction** | Messaging Transaction Management | Create, manage and validate messaging transactions          |
+| **Action**                | Action Management                | Create, manage and transactions actions                     |
+| **Virtual service**       | Virtual Service Management       | Create, manage, deploy, stop virtual services               |
+| **Asset**                 | Asset Management                 | Upload assets                                               |
+| **Configuration**         | Configuration Management         | Create, manage configurations                               |
+| **Sandbox**               | Sandbox Management               | Assign http transaction, test it                            |
+| **Tracking**              | Tracking Management              | Fetch tracking status for virtual service actions           |
+| **Asset Tracking**        | Tracking Management              | Fetch tracking status for asset upload action               |
 
 ---
 
 ### **User Management**
-**What it does:** Get information about your BlazeMeter account and default settings.
+**What it does:** Get information about BlazeMeter account and default settings.
 
 | Action | What you get |
 |--------|-------------|
 | Get user info | Your username, default account, workspace, and project IDs |
-
-**When to use:** Start here to get your default account, workspace, and project IDs.
 
 ---
 
@@ -107,12 +101,10 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Get account details | Account information and AI consent status |
 | List accounts | All accounts you have access to |
 
-**When to use:** Verify AI consent and access account-level information.
-
 ---
 
 ### **Workspace Management**
-**What it does:** Navigate and manage your testing workspaces.
+**What it does:** Navigate and manage testing workspaces.
 
 | Action | What you get |
 |--------|-------------|
@@ -120,58 +112,208 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | List workspaces | All workspaces in an account |
 | Get locations | Available test locations for different purposes |
 
-**When to use:** Navigate your testing infrastructure and check available locations.
+---
+
+### **Service Management**
+**What it does:**  Creates and manages services.
+
+| Action              | What you get                    |
+|---------------------|---------------------------------|
+| Create a new service | A service with provided name    |
+| Get service         | A workspace service information |
+| List services       | All services in a workspace     |
 
 ---
 
-### **Project Management**
-**What it does:** Organize your tests within workspaces.
+### **Http Transaction Management**
+**What it does:** Creates, validates, and manages http transactions.
 
-| Action | What you get |
-|--------|-------------|
-| Get project details | Project information and test count |
-| List projects | All projects in a workspace |
-
-**When to use:** Organize tests within workspaces and check project statistics.
-
----
-
-### **Test Management**
-**What it does:** Create, configure, and manage your performance tests.
-
-| Action | What you get |
-|--------|-------------|
-| Get test details | Test configuration and current settings |
-| Create test | New performance test |
-| List tests | All tests in a project |
-| Configure load | Set users, duration, ramp-up settings |
-| Configure locations | Set geographic distribution |
-| Upload files | Upload test scripts and assets |
-
-**When to use:** Create and configure performance tests with scripts and load parameters.
+| Action                        | What you get                                          |
+|-------------------------------|-------------------------------------------------------|
+| Read an HTTP Transaction      | Reads HTTP Transaction details                        |
+| Create a new HTTP transaction | Creates a new HTTP transaction                        |
+| Update HTTP transaction       | Updates existing HTTP transaction                     |
+| List all HTTP transactions    | Lists all HTTP transactions in a workspace or service |
+| Validate template             | Validates handlebars template                         |
+| Convert template              | Safely converts handlebars template to VS format      |
+| Assign keystore               | Assign keystore asset to an existing transaction      |
+| Assign certificate            | Assign certificate asset to an existing transaction   |
 
 ---
 
-### **Execution Management**
-**What it does:** Run tests and analyze results.
+### **Messaging Transaction Management**
+**What it does:** Creates, validates, and manages messaging transactions.
 
-| Action | What you get |
-|--------|-------------|
-| Start test | Launch a configured test |
-| Get execution status | Current test status and details |
-| List executions | All executions for a test |
-| Get summary report | Test execution summary |
-| Get error report | Error analysis and details |
-| Get request stats | Request statistics and performance metrics |
-| Get all reports | Complete test results (summary, errors, stats) |
+| Action                             | What you get                                                  |
+|------------------------------------|---------------------------------------------------------------|
+| Read an Messaging Transaction      | Reads Messaging Transaction details                           |
+| Create a new Messaging transaction | Creates a new Messaging transaction                           |
+| Update Messaging transaction       | Updates existing Messaging transaction                        |
+| List all Messaging transactions    | Lists all Messaging transactions in a workspace or service    |
+| Validate template                  | Validates handlebars template                                 |
+| Convert template                   | Safely converts handlebars template to VS format              |
+| Assign keystore                    | Assign keystore asset to an existing Messaging transaction    |
+| Assign certificate                 | Assign certificate asset to an existing Messaging transaction |
+---
 
-**When to use:** Run tests and analyze results with comprehensive reporting.
+### **Action Management**
+**What it does:** Creates actions for transaction.
+
+| Action                      | What you get                                   |
+|-----------------------------|------------------------------------------------|
+| Create an HTTP Call         | Creates an HTTP Call sync action               |
+| Create a Web Hook           | Creates a Webhook async                        |
+| Assign keystore             | Assign keystore asset to an existing action    |
+| Assign certificate          | Assign certificate asset to an existing action |
 
 ---
 
+### **Asset Management**
+**What it does:** Creates, lists, manages assets.
+
+| Action                 | What you get                                              |
+|------------------------|-----------------------------------------------------------|
+| Read an Asset          | Reads Asset details                                       |
+| List all Assets        | Lists all assets in a workspace                           |
+| Upload asset file      | Creates an asset from user's file                         |
+| Set keystore passwords | Sets passwords for existing certificate or keystore asset |
+
+---
+
+### **Configuration Management**
+**What it does:** Creates, lists, manages configurations.
+
+| Action                    | What you get                              |
+|---------------------------|-------------------------------------------|
+| Read a Configuration      | Reads Configuration details               |
+| List all Configurations   | Lists all configurations in a workspace   |
+| Create a Configuration    | Creates new configuration                 |
+| Update a Configuration    | Adds new values to existing configuration |
+
+---
+
+### **Location Management**
+**What it does:** Lists available locations.
+
+| Action                 | What you get                              |
+|------------------------|-------------------------------------------|
+| List all locations     | Lists all locations in a workspace        |
+
+---
+
+### **Sandbox Management**
+**What it does:** Validates HTTP transactions without deploying a virtual service.
+
+| Action       | What you get                                                             |
+|--------------|--------------------------------------------------------------------------|
+| Init sandbox | Assigns an existing transaction to the sandbox                           |
+| Test request | Sends test http request to the sandbox and receives transaction response |
+
+---
+
+### **Tracking Management**
+**What it does:** Reads virtual service action tracking details.
+
+| Action          | What you get                                  |
+|-----------------|-----------------------------------------------|
+| Read a tracking | Reads virtual service action tracking details |
+
+---
+
+### **Asset Tracking Management**
+**What it does:** Reads file upload tracking details.
+
+| Action          | What you get                       |
+|-----------------|------------------------------------|
+| Read a tracking | Reads file upload tracking details |
+
+---
+### **Virtual Service Management**
+**What it does:** Create, manage, deploy, stop, update your virtual service.
+
+| Action                       | What you get                                           |
+|------------------------------|--------------------------------------------------------|
+| Read a Virtual Service       | Reads Virtual Service details                          |
+| Create a new Virtual Service | Creates a new Virtual Service with enabled HTTP runner |
+| Update Virtual Service       | Updates existing Virtual Service                       |
+| List all virtual services    | Lists all Virtual Services in a workspace or service   |
+| Deploy virtual service       | Starts virtual service container                       |
+| Configure virtual service    | Updates running virtual service                        |
+| Stop virtual service         | Stops virtual service container                        |
+| Assign trasnactions          | Assigns transactions to the virtual service            |
+| Unassign trasnactions        | Unassigns transactions from the virtual service        |
+| Assign configuration         | Assigns configuration to the virtual service           |
+
+---
+### **MCP Client Configuration for Local testing using HTTP**
+1. Run main.py with --http flag
+2. Connect to the MCP server using the following URL:
+```http://localhost:8000/mcp ```
+3. Example request
+``` json
+{
+  "jsonrpc": "2.0",
+  "id": "2",
+  "method": "tools/call",
+  "params": {
+    "name": "virtual_services_virtual_service",
+    "arguments": {
+      "action": "create",
+      "args": {
+        "name": "test-ms1114",
+				"workspace_id": 1622,
+			  "serviceId": 4,
+				"type": "TRANSACTIONAL",
+				"harborId": "664e1a51e58e6125010f3178",
+				"shipId": "664e1a6099590d3961050698",
+				"noMatchingRequestPreference": "return404",
+				"endpointPreference": "HTTPS",
+				"replicas": 1,
+				"mockServiceTransactions": [],
+				"httpRunnerEnabled": true,
+				"endpoints": []
+      }
+    }
+  }
+}
+```
+
+### **MCP Client Configuration for Local testing using VS Code or Claude Desktop**
+   1. Run main.py with --mcp flag
+   2. Configure your MCP client with the following settings:
+```json
+{
+  "mcpServers": {
+    "virtual services mcp": {
+      "disabled": false,
+      "timeout": 60,
+      "type": "stdio",
+      "command": "path to your python interpreter /.../venv/bin/python",
+      "args": [
+        "path to project main.py /.../vs_mcp/main.py",
+        "--mcp"
+      ],
+      "env": {
+        "BLAZEMETER_API_KEY": "path to api key file /.../api-key.json"
+      }
+    }
+  }
+}
+```
+
+## Format of the Api key file  
+          
+```json
+{
+  "id": "your_api_key_id",
+  "secret": "your_api_key_secret"
+}
+```
 ## Docker Support
 
 ### **MCP Client Configuration for Docker**
+ Build dokcer image using the following command:
+ ```docker build . -t bzm-mcp:latest ```
 
 ```json
 {
@@ -184,6 +326,10 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "-i",
         "--mount",
         "type=bind,source=/path/to/your/test/files,target=/home/bzm-mcp/working_directory/",
+        "-e", 
+        "VS_URL=https://ci-mock.blazemeter.net/api/v1", //OPTIONAL: only if you want to use non-prod environmen
+        "-e", 
+        "BZM_URL=https://ci.blazemeter.net/api/v4",   //OPTIONAL: only if you want to use non-prod environmen   
         "-e",
         "API_KEY_ID=your_api_key_id",
         "-e",
@@ -202,17 +348,3 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 
 > [!NOTE]
 > In order to obtain the `API_KEY_ID` and`API_KEY_SECRET` refere to [BlazeMeter API keys](https://help.blazemeter.com/docs/guide/api-blazemeter-api-keys.html)
-
----
-
-## License
-
-This project is licensed under the Apache License, Version 2.0. Please refer to [LICENSE](./LICENSE) for the full terms.
-
----
-
-## Support
-
-- **Documentation**: [BlazeMeter API Documentation](https://help.blazemeter.com/apidocs/)
-- **Issues**: [GitHub Issues](https://github.com/BlazeMeter/bzm-mcp/issues)
-- **Support**: Contact BlazeMeter support for enterprise assistance

@@ -100,14 +100,6 @@ class VirtualServiceManager:
             result_formatter=format_virtual_services_action
         )
 
-    async def delete(self, workspace_id: int, vs_id: int) -> BaseResult:
-        return await vs_api_request(
-            self.token,
-            "DELETE",
-            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}/delete",
-            result_formatter=format_virtual_services_action
-        )
-
     async def assign_transactions(self, workspace_id: int, id: int, transaction_ids: List[int]) -> BaseResult:
         vs_body = {
             "includeIds": transaction_ids
@@ -187,16 +179,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
                 id (int): Mandatory. The id of the virtual service to stop.
-        - update: Update a virtual service. Updates the virtual service with the provided information.
+        - configure: Configures a virtual service. Only available if Virtual service is running.
+            Updates transactions loaded into the virtual service.
             Action result contains tracking id to track the update action. Use tracking tool to track the update action.
             Update action is finished, when tracking status is 'FINISHED'. If update action fails, tracking status is 'FAILED'. 
             args(VirtualService): A virtual service object with the following fields:
-                workspace_id (int): Mandatory. The id of the virtual service.
-                id (int): Mandatory. The id of the virtual service to update.
-        - delete: Delete a virtual service. Deletes the virtual service.
-            Action result contains tracking id to track the delete action. Use tracking tool to track the delete action.
-            Delete action is finished, when tracking status is 'FINISHED'. If delete action fails, tracking status is 'FAILED'. 
-            args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the virtual service.
                 id (int): Mandatory. The id of the virtual service to update.
         - assign_transactions: Assigns the transactions to the virtual service. Transactions should belong to the same service as the virtual service.
@@ -231,10 +218,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await vs_manager.deploy(args["workspace_id"], args["id"])
                 case "stop":
                     return await vs_manager.stop(args["workspace_id"], args["id"])
-                case "update":
+                case "configure":
                     return await vs_manager.update(args["workspace_id"], args["id"])
-                case "delete":
-                    return await vs_manager.delete(args["workspace_id"], args["id"])
                 case "read":
                     return await vs_manager.read(args["workspace_id"], args["id"])
                 case "list":

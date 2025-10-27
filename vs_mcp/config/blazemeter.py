@@ -1,9 +1,5 @@
-# BZM_API_BASE_URL: str = "https://a.blazemeter.com/api/v4"
-
-BZM_API_BASE_URL: str = "https://ci.blazemeter.net/api/v4"
-# VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
-VS_API_BASE_URL: str = "http://localhost:8080/api/v1"
-# VS_API_BASE_URL: str = "https://ci-mock.blazemeter.net/api/v1"
+BZM_API_BASE_URL: str = "https://a.blazemeter.com/api/v4"
+VS_API_BASE_URL: str = "https://mock.blazemeter.com/api/v1"
 BZM_BASE_URL: str = "https://a.blazemeter.com/"
 TOOLS_PREFIX: str = "blazemeter"
 VS_TOOLS_PREFIX: str = "virtual_services"

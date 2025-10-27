@@ -329,25 +329,25 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             Each helper must always be opened and closed when block form is used (e.g. {{#assign ...}}{{/assign}}, {{#eq ...}}{{/eq}}, {{#each ...}}{{/each}}).  
             Inline helpers like {{join ...}}, {{replace ...}}, {{upper ...}}, {{jsonPath ...}} do not require closing tags.
         Actions:
-        - read: Read a Transaction. Get the information of a transaction.
+        - read: Read an HTTP Transaction. Get the information of a transaction.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
                 id (int): Mandatory. The id of the transaction to get information.
-        - list: List all transactions. 
+        - list: List all HTTP transactions. 
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
                 serviceId (int): Optional. The id of the service to list transactions from. Without this it will list all transactions in the workspace.
                 virtual_service_id (int): Optional. The id of the virtual service to list transactions from. Without this it will list all transactions in the workspace.
                 limit (int, default=10, valid=[1 to 50]): The number of transactions to list.
                 offset (int, default=0): Number of transactions to skip.
-        - validate_template: Validates template used in transaction definition.
+        - validate_template: Validate template. Validates template used in transaction definition.
             args:
                 template (str): Mandatory. The handlebars template to validate.
-        - convert_template: Converts template to blazemeter format.
+        - convert_template: Convert template. Converts template to blazemeter format.
             args:
                 template (str): Mandatory. The handlebars template to validate.
                 encode (bool, default=True): Whether to encode the converted template to Base64.
-        - create: Create a new transaction.
+        - create: Create a new HTTP transaction.
             Important: before using template in transaction definition validate it and 
             convert it first using validate_template and convert_template actions.
             args(Transaction): A Transaction object with the following fields:

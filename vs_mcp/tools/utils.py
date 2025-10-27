@@ -1,6 +1,7 @@
 """
 Simple utilities for BlazeMeter MCP tools.
 """
+import os
 import platform
 from datetime import datetime
 from typing import Optional, Callable
@@ -72,14 +73,14 @@ async def bzm_api_request(token: Optional[BzmToken], method: str, endpoint: str,
                           result_formatter: Optional[Callable] = None,
                           result_formatter_params: Optional[dict] = None,
                           **kwargs) -> BaseResult:
-    return await _api_request(BZM_API_BASE_URL, token, method, endpoint,
+    return await _api_request(os.getenv('BZM_URL', BZM_API_BASE_URL), token, method, endpoint,
                               result_formatter, result_formatter_params, **kwargs)
 
 async def vs_api_request(token: Optional[BzmToken], method: str, endpoint: str,
                          result_formatter: Optional[Callable] = None,
                          result_formatter_params: Optional[dict] = None,
                          **kwargs) -> BaseResult:
-    return await _api_request(VS_API_BASE_URL, token, method, endpoint,
+    return await _api_request(os.getenv('VS_URL', VS_API_BASE_URL), token, method, endpoint,
                               result_formatter, result_formatter_params, **kwargs)
 
 def get_date_time_iso(timestamp: Optional[int]) -> Optional[str]:

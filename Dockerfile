@@ -1,51 +1,46 @@
-# Copyright 2025 BlazeMeter author
-#
-# Licensed under the Apache License, Version 2.0 (the "License");
-# you may not use this file except in compliance with the License.
-# You may obtain a copy of the License at
-#
-#     http://www.apache.org/licenses/LICENSE-2.0
-#
-# Unless required by applicable law or agreed to in writing, software
-# distributed under the License is distributed on an "AS IS" BASIS,
-# WITHOUT WARRANTIES OR CONDITIONS OF ANY KIND, either express or implied.
-# See the License for the specific language governing permissions and
-# limitations under the License.
-
-FROM ubuntu:25.10
-
+# ----------------------------
+# Stage 1: Builder
+# ----------------------------
+FROM python:3.12-slim AS builder
 
 WORKDIR /app
 
-# Update system packages for security patches
-RUN apt-get update -y && apt-get upgrade -y && apt-get clean && rm -rf /var/lib/apt/lists/*
+# Install system dependencies needed for PyInstaller
+RUN apt-get update && apt-get install -y --no-install-recommends \
+    binutils \
+    gcc \
+    libc6-dev \
+    make \
+ && rm -rf /var/lib/apt/lists/*
 
-# Create a non-root user
+# Copy pyproject.toml and source code
+COPY pyproject.toml .
+COPY uv.lock .
+COPY vs_mcp/ ./vs_mcp
+
+# Install your project and its dependencies
+RUN pip install --no-cache-dir . \
+    && pip install --no-cache-dir pyinstaller tomli pdm
+
+RUN pdm install --prod --no-self
+
+# Run build.py
+WORKDIR /app/vs_mcp
+RUN python build.py
+# ----------------------------
+# Stage 2: Final
+# ----------------------------
+FROM python:3.12-slim AS runtime
+
+WORKDIR /app
+
+# Copy the statically named binary
+COPY --from=builder /app/vs_mcp/dist/bzm-mcp-linux /usr/local/bin/bzm-mcp
+RUN chmod +x /usr/local/bin/bzm-mcp
+
+# Run as non-root user
 RUN groupadd -r bzm-mcp && useradd -r -g bzm-mcp bzm-mcp
-
-ARG TARGETPLATFORM
-
-# Copy all pre-built binaries
-COPY dist/ ./dist/
-
-# Select and copy the appropriate binary based on target platform
-RUN case "${TARGETPLATFORM}" in \
-    "linux/amd64") cp ./dist/bzm-mcp-linux-amd64 ./bzm-mcp ;; \
-    "linux/arm64") cp ./dist/bzm-mcp-linux-arm64 ./bzm-mcp ;; \
-    *) echo "Unsupported platform: ${TARGETPLATFORM}. Supported: linux/amd64, linux/arm64" && exit 1 ;; \
-    esac && \
-    echo "Selected binary for platform: ${TARGETPLATFORM}" && \
-    rm -rf ./dist/
-
-    
-RUN chmod +x ./bzm-mcp && \
-    chown bzm-mcp:bzm-mcp ./bzm-mcp
-
-# Switch to non-root user
 USER bzm-mcp
 
-ENV MCP_DOCKER=true
-
-# Command to run the application
-ENTRYPOINT ["./bzm-mcp"]
+ENTRYPOINT ["bzm-mcp"]
 CMD ["--mcp"]

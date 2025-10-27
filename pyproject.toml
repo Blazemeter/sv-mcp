@@ -3,7 +3,7 @@ name = "bzm-mcp"
 version = "1.0"
 description = "BlazeMeter MCP"
 readme = "README.md"
-requires-python = ">=3.11"
+requires-python = ">=3.11,<3.14"
 dependencies = [
     "httpx[http2]>=0.28.1",
     "mcp[cli]>=1.13.0",
@@ -16,4 +16,4 @@ dependencies = [
 [project.scripts]
 bzm-mcp = "main:run"
 [tool.setuptools]
-packages = ["config", "models", "formatters"]
+packages = { find = { where = ["vs_mcp"] } }

@@ -5,7 +5,7 @@ from unittest.mock import patch
 
 import pytest
 
-from config.path_mapper import (
+from vs_mcp.config.path_mapper import (
     BinaryPathMappingStrategy,
     DockerPathMappingStrategy,
     PathMapperFactory,

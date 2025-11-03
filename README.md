@@ -14,6 +14,7 @@ to deploying it to the virtual service. All through natural language interaction
 - **Location Management**: List available locations.
 - **Configuration Management**: Create and manage configurations for virtual services.
 - **Virtual Service Management**: Create, modify, deploy, stop a virtual service, track its status.
+- **Virtual Service Templates Management**: Create, modify, create from the virtual service, apply to a virtual service.
 
 ---
 
@@ -66,21 +67,22 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
 
 The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through six main tools:
 
-| Tool                      | Purpose                          | Key Capabilities                                            |
-|---------------------------|----------------------------------|-------------------------------------------------------------|
-| **User**                  | Blazemeter User Information      | Get current user details, default account/workspace/project |
-| **Account**               | Blazemeter Account Management    | List accounts, check AI consent, read account details       |
-| **Workspace**             | Blazemeter Workspace Management  | Manage workspaces, get locations, check billing usage       |
-| **Service**               | Service Management               | Create and manage services                                  |
-| **Http Transaction**      | Http Transaction Management      | Create, manage and validate http transactions               |
-| **Messaging Transaction** | Messaging Transaction Management | Create, manage and validate messaging transactions          |
-| **Action**                | Action Management                | Create, manage and transactions actions                     |
-| **Virtual service**       | Virtual Service Management       | Create, manage, deploy, stop virtual services               |
-| **Asset**                 | Asset Management                 | Upload assets                                               |
-| **Configuration**         | Configuration Management         | Create, manage configurations                               |
-| **Sandbox**               | Sandbox Management               | Assign http transaction, test it                            |
-| **Tracking**              | Tracking Management              | Fetch tracking status for virtual service actions           |
-| **Asset Tracking**        | Tracking Management              | Fetch tracking status for asset upload action               |
+| Tool                         | Purpose                             | Key Capabilities                                            |
+|------------------------------|-------------------------------------|-------------------------------------------------------------|
+| **User**                     | Blazemeter User Information         | Get current user details, default account/workspace/project |
+| **Account**                  | Blazemeter Account Management       | List accounts, check AI consent, read account details       |
+| **Workspace**                | Blazemeter Workspace Management     | Manage workspaces, get locations, check billing usage       |
+| **Service**                  | Service Management                  | Create and manage services                                  |
+| **Http Transaction**         | Http Transaction Management         | Create, manage and validate http transactions               |
+| **Messaging Transaction**    | Messaging Transaction Management    | Create, manage and validate messaging transactions          |
+| **Action**                   | Action Management                   | Create, manage and transactions actions                     |
+| **Virtual service**          | Virtual Service Management          | Create, manage, deploy, stop virtual services               |
+| **Virtual service template** | Virtual Service Template Management | Create, manage, apply to the virtual service                |
+| **Asset**                    | Asset Management                    | Upload assets                                               |
+| **Configuration**            | Configuration Management            | Create, manage configurations                               |
+| **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                            |
+| **Tracking**                 | Tracking Management                 | Fetch tracking status for virtual service actions           |
+| **Asset Tracking**           | Tracking Management                 | Fetch tracking status for asset upload action               |
 
 ---
 
@@ -243,6 +245,20 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Assign trasnactions          | Assigns transactions to the virtual service            |
 | Unassign trasnactions        | Unassigns transactions from the virtual service        |
 | Assign configuration         | Assigns configuration to the virtual service           |
+
+---
+### **Virtual Service Template Management**
+**What it does:** Create, manage virtual service templates.
+
+| Action                                | What you get                                                  |
+|---------------------------------------|---------------------------------------------------------------|
+| Read a Virtual Service Template       | Reads Virtual Service Template details                        |
+| Create a new Virtual Service Template | Creates a new Virtual Service Template                        |
+| Update Virtual Service Template       | Updates existing Virtual Service Template                     |
+| List all Virtual Service Templates    | Lists all Virtual Service Templates in a workspace or service | |
+| Assign trasnactions                   | Assigns transactions to the Virtual Service Template          |
+| Unassign trasnactions                 | Unassigns transactions from the Virtual Service Template      |
+| Assign configuration                  | Assigns configuration to the Virtual Service Template         |
 
 ---
 ### **MCP Client Configuration for Local testing using HTTP**

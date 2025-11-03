@@ -1,6 +1,7 @@
 from typing import (List, Any, Optional)
 
 from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
+from vs_mcp.models.vs.proxy_configuration import ProxyConfiguration
 from vs_mcp.models.vs.virtual_service import VirtualService, ActionResult, Endpoint
 
 
@@ -21,6 +22,8 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
                 replicas=vs.get("replicas"),
                 mockServiceTransactions=[MockServiceTransaction(**d) for d in vs.get("mockServiceTransactions") or []],
                 endpoints=[Endpoint(**d) for d in vs.get("endpoints") or []],
+                httpRunnerEnabled=vs.get("httpRunnerEnabled"),
+                proxy=ProxyConfiguration(**vs.get("proxy")) if vs.get("proxy") else None,
             )
         )
     return formatted_vs

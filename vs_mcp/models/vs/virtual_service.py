@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
+from vs_mcp.models.vs.proxy_configuration import ProxyConfiguration
 
 
 class Endpoint(BaseModel):
@@ -52,6 +53,7 @@ class VirtualService(BaseModel):
         True,
         description="Http runner enabled flag, must be enabled for virtual services with 'TRANSACTIONAL' type."
     )
+    proxy: Optional[ProxyConfiguration] = Field(None, description="Proxy configuration for the virtual service")
 
     class Config:
         extra = "ignore"

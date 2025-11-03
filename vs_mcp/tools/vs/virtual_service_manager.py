@@ -236,6 +236,14 @@ class VirtualServiceManager:
             json=update_request,
         )
 
+    async def apply_template(self, workspace_id: int, vs_id: int, template_id: int) -> BaseResult:
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}/apply-template/{template_id}",
+            result_formatter=format_virtual_services_action
+        )
+
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -324,7 +332,13 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         - unset_proxy: Removes proxy server configuration from the virtual service.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
+                id (int): Mandatory. The id of the virtual service to remove proxy.     
+        - apply_template: Applies virtual service template settings to the virtual service.
+            Result contains tracking id to track the update action. Use tracking tool to track the update action.
+            args(dict): Dictionary with the following required parameters:
+                workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
                 id (int): Mandatory. The id of the virtual service to remove proxy.
+                template_id (int): Mandatory. The id of the virtual service template.
         VirtualService Schema (including full MockServiceTransaction):
         """ + str(VirtualService.model_json_schema()) + """
         Virtual service deploy/stop/update/delete actions result schema:
@@ -417,6 +431,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "unset_proxy":
                     return await vs_manager.unset_proxy(
                         args["workspace_id"], args["id"]
+                    )
+                case "apply_template":
+                    return await vs_manager.apply_template(
+                        args["workspace_id"], args["id"], args["template_id"]
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")

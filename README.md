@@ -233,18 +233,21 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 ### **Virtual Service Management**
 **What it does:** Create, manage, deploy, stop, update your virtual service.
 
-| Action                       | What you get                                           |
-|------------------------------|--------------------------------------------------------|
-| Read a Virtual Service       | Reads Virtual Service details                          |
-| Create a new Virtual Service | Creates a new Virtual Service with enabled HTTP runner |
-| Update Virtual Service       | Updates existing Virtual Service                       |
-| List all virtual services    | Lists all Virtual Services in a workspace or service   |
-| Deploy virtual service       | Starts virtual service container                       |
-| Configure virtual service    | Updates running virtual service                        |
-| Stop virtual service         | Stops virtual service container                        |
-| Assign trasnactions          | Assigns transactions to the virtual service            |
-| Unassign trasnactions        | Unassigns transactions from the virtual service        |
-| Assign configuration         | Assigns configuration to the virtual service           |
+| Action                         | What you get                                                     |
+|--------------------------------|------------------------------------------------------------------|
+| Read a Virtual Service         | Reads Virtual Service details                                    |
+| Create a new Virtual Service   | Creates a new Virtual Service with enabled HTTP runner           |
+| Update Virtual Service         | Updates existing Virtual Service                                 |
+| List all Virtual services      | Lists all Virtual Services in a workspace or service             |
+| Deploy Virtual Service         | Starts Virtual Service container                                 |
+| Configure Virtual Service      | Updates running Virtual Service                                  |
+| Stop Virtual Service           | Stops Virtual Service container                                  |
+| Assign trasnactions            | Assigns transactions to the Virtual Service                      |
+| Unassign trasnactions          | Unassigns transactions from the Virtual Service                  |
+| Assign configuration           | Assigns configuration to the Virtual Service                     |
+| Apply Virtual Service Template | Applies Virtual Service Template settings to the Virtual Service |
+| Set Proxy                      | Adds proxy settings to the Virtual Service                       |
+| Unset Proxy                    | Removes proxy settings from the Virtual Service                  |
 
 ---
 ### **Virtual Service Template Management**

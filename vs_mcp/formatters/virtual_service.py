@@ -1,5 +1,6 @@
 from typing import (List, Any, Optional)
 
+from vs_mcp.models.vs.assigned_asset import AssignedAsset
 from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 from vs_mcp.models.vs.proxy_configuration import ProxyConfiguration
 from vs_mcp.models.vs.virtual_service import VirtualService, ActionResult, Endpoint
@@ -24,6 +25,7 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
                 endpoints=[Endpoint(**d) for d in vs.get("endpoints") or []],
                 httpRunnerEnabled=vs.get("httpRunnerEnabled"),
                 proxy=ProxyConfiguration(**vs.get("proxy")) if vs.get("proxy") else None,
+                assets=[AssignedAsset(**d) for d in vs.get("assets") or []],
             )
         )
     return formatted_vs

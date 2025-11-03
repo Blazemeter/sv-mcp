@@ -2,6 +2,7 @@ from typing import Optional, List
 
 from pydantic import BaseModel, Field
 
+from vs_mcp.models.vs.assigned_asset import AssignedAsset
 from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 
 
@@ -28,7 +29,7 @@ class VirtualServiceTemplate(BaseModel):
         True,
         description="Http runner enabled flag, must be enabled for virtual service template"
     )
-
+    assets: Optional[List[AssignedAsset]] = Field(None, description="List of assets")
     class Config:
         extra = "ignore"
 

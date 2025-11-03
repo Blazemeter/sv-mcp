@@ -1,5 +1,6 @@
 from typing import (List, Any, Optional)
 
+from vs_mcp.models.vs.assigned_asset import AssignedAsset
 from vs_mcp.models.vs.generic_dsl import GenericDsl
 from vs_mcp.models.vs.http_transaction import HttpTransaction
 from vs_mcp.models.vs.messaging_dsl import MessagingDsl
@@ -15,7 +16,8 @@ def format_http_transactions(transactions: List[Any], params: Optional[dict] = N
                 name=transaction.get("name"),
                 serviceId=transaction.get("serviceId"),
                 type=transaction.get("type"),
-                dsl=GenericDsl(**transaction.get("dsl"))
+                dsl=GenericDsl(**transaction.get("dsl")),
+                assets=[AssignedAsset(**d) for d in transaction.get("assets") or []],
             )
         )
     return formatted_transactions
@@ -30,7 +32,8 @@ def format_messaging_transactions(transactions: List[Any], params: Optional[dict
                 name=transaction.get("name"),
                 serviceId=transaction.get("serviceId"),
                 type=transaction.get("type"),
-                dsl=MessagingDsl(**transaction.get("dsl"))
+                dsl=MessagingDsl(**transaction.get("dsl")),
+                assets=[AssignedAsset(**d) for d in transaction.get("assets") or []],
             )
         )
     return formatted_transactions

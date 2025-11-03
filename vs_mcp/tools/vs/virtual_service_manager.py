@@ -244,6 +244,20 @@ class VirtualServiceManager:
             result_formatter=format_virtual_services_action
         )
 
+    async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
+        assert_type_body = {
+            "assetId": assetId,
+            "usageType": type,
+            "alias": alias
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}/assign-asset",
+            result_formatter=format_virtual_services,
+            json=assert_type_body
+        )
+
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -339,6 +353,18 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
                 id (int): Mandatory. The id of the virtual service to remove proxy.
                 template_id (int): Mandatory. The id of the virtual service template.
+        - assign_keystore: Assign Keystore asset to the Virtual Service.
+            args(dict):
+                id (int): Mandatory. The id of the Virtual Service.
+                asset_id (int): Mandatory. The id of the keystore asset to assign.
+                alias (str): Mandatory. The certificate alias to use.
+                workspace_id (int): Mandatory. The id of the workspace.  
+        - assign_keystore_truststore: Assign Keystore asset to the Virtual Service. Asset will be used as both Keystore and Truststore.
+                Use this action for 2way ssl setup.
+            args(dict):
+                id (int): Mandatory. The id of the Virtual Service.
+                asset_id (int): Mandatory. The id of the certificate asset to assign.
+                workspace_id (int): Mandatory. The id of the workspace.       
         VirtualService Schema (including full MockServiceTransaction):
         """ + str(VirtualService.model_json_schema()) + """
         Virtual service deploy/stop/update/delete actions result schema:
@@ -435,6 +461,22 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "apply_template":
                     return await vs_manager.apply_template(
                         args["workspace_id"], args["id"], args["template_id"]
+                    )
+                case "assign_keystore_truststore":
+                    return await vs_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "SERVER_KEYSTORE_TRUSTSTORE",
+                        args["asset_id"],
+                        args["alias"],
+                    )
+                case "assign_keystore":
+                    return await vs_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "SERVER_KEYSTORE",
+                        args["asset_id"],
+                        None,
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")

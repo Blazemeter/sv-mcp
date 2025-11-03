@@ -40,20 +40,20 @@ class VirtualServiceTemplateManager:
         )
 
     async def create(
-        self,
-        workspace_id: int,
-        vs_name: str,
-        service_id: int,
-        replicas: int,
-        noMatchingRequestPreference: str,
-        mock_service_transactions: List[MockServiceTransaction],
-        http_runner_enabled: bool
+            self,
+            workspace_id: int,
+            vs_name: str,
+            service_id: int,
+            replicas: int,
+            noMatchingRequestPreference: str,
+            mock_service_transactions: List[MockServiceTransaction],
+            http_runner_enabled: bool
     ) -> BaseResult:
         transactions_list = (
             [txn.model_dump() for txn in mock_service_transactions]
             if isinstance(mock_service_transactions, list)
-            and mock_service_transactions
-            and isinstance(mock_service_transactions[0], MockServiceTransaction)
+               and mock_service_transactions
+               and isinstance(mock_service_transactions[0], MockServiceTransaction)
             else mock_service_transactions
         )
 
@@ -77,15 +77,15 @@ class VirtualServiceTemplateManager:
         )
 
     async def update(
-        self,
-        workspace_id: int,
-        template_id: int,
-        vs_name: Optional[str],
-        service_id: Optional[int],
-        replicas: Optional[int],
-        noMatchingRequestPreference: Optional[str],
-        mock_service_transactions: Optional[List[MockServiceTransaction]],
-        http_runner_enabled: Optional[bool],
+            self,
+            workspace_id: int,
+            template_id: int,
+            vs_name: Optional[str],
+            service_id: Optional[int],
+            replicas: Optional[int],
+            noMatchingRequestPreference: Optional[str],
+            mock_service_transactions: Optional[List[MockServiceTransaction]],
+            http_runner_enabled: Optional[bool],
     ) -> BaseResult:
         update_request = {"id": template_id, "workspaceId": workspace_id}
 
@@ -104,8 +104,8 @@ class VirtualServiceTemplateManager:
             transactions_list = (
                 [txn.model_dump() for txn in mock_service_transactions]
                 if isinstance(mock_service_transactions, list)
-                and mock_service_transactions
-                and isinstance(mock_service_transactions[0], MockServiceTransaction)
+                   and mock_service_transactions
+                   and isinstance(mock_service_transactions[0], MockServiceTransaction)
                 else mock_service_transactions
             )
             update_request["mockServiceTransactions"] = transactions_list
@@ -128,7 +128,8 @@ class VirtualServiceTemplateManager:
             json=vs_body,
         )
 
-    async def unassign_transactions(self, workspace_id: int, template_id: int, transaction_ids: List[int]) -> BaseResult:
+    async def unassign_transactions(self, workspace_id: int, template_id: int,
+                                    transaction_ids: List[int]) -> BaseResult:
         vs_body = {"excludeIds": transaction_ids}
         return await vs_api_request(
             self.token,
@@ -146,6 +147,20 @@ class VirtualServiceTemplateManager:
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TEMPLATE_ENDPOINT}/{template_id}",
             result_formatter=format_virtual_service_templates,
             json=vs_body,
+        )
+
+    async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
+        assert_type_body = {
+            "assetId": assetId,
+            "usageType": type,
+            "alias": alias
+        }
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TEMPLATE_ENDPOINT}/{id}/assign-asset",
+            result_formatter=format_virtual_service_templates,
+            json=assert_type_body
         )
 
 
@@ -200,13 +215,25 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service template belongs to.
                 id (int): Mandatory. The id of the virtual service template to assign the transaction to.
                 configuration_id (list[int]): Mandatory. The id of the configuration to assign to the virtual service template.
+        - assign_keystore: Assign Keystore asset to the Virtual Service Template.
+            args(dict):
+                id (int): Mandatory. The id of the Virtual Service Template.
+                asset_id (int): Mandatory. The id of the keystore asset to assign.
+                alias (str): Mandatory. The certificate alias to use.
+                workspace_id (int): Mandatory. The id of the workspace.  
+        - assign_keystore_truststore: Assign Keystore asset to the Virtual Service Template. Asset will be used as both Keystore and Truststore.
+                Use this action for 2way ssl setup.
+            args(dict):
+                id (int): Mandatory. The id of the Virtual Service Template.
+                asset_id (int): Mandatory. The id of the certificate asset to assign.
+                workspace_id (int): Mandatory. The id of the workspace.     
         VirtualServiceTemplate Schema (including full MockServiceTransaction):
         """ + str(VirtualServiceTemplate.model_json_schema())
     )
     async def virtual_service_template(
-        action: str,
-        args: Annotated[Dict[str, Any], VirtualServiceTemplate.model_json_schema()],
-        ctx: Context,
+            action: str,
+            args: Annotated[Dict[str, Any], VirtualServiceTemplate.model_json_schema()],
+            ctx: Context,
     ) -> BaseResult:
         vs_manager = VirtualServiceTemplateManager(token, ctx)
         try:
@@ -261,6 +288,22 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "assign_configuration":
                     return await vs_manager.assign_configuration(
                         args["workspace_id"], args["id"], args["configuration_id"]
+                    )
+                case "assign_keystore_truststore":
+                    return await vs_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "SERVER_KEYSTORE_TRUSTSTORE",
+                        args["asset_id"],
+                        args["alias"],
+                    )
+                case "assign_keystore":
+                    return await vs_manager.assign_asset(
+                        args["id"],
+                        args["workspace_id"],
+                        "SERVER_KEYSTORE",
+                        args["asset_id"],
+                        None,
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service template manager tool")

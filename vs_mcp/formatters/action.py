@@ -1,6 +1,7 @@
 from typing import (List, Any, Optional)
 
 from vs_mcp.models.vs.action import Action
+from vs_mcp.models.vs.assigned_asset import AssignedAsset
 
 
 def format_actions(actions: List[Any], params: Optional[dict] = None) -> List[Action]:
@@ -10,7 +11,7 @@ def format_actions(actions: List[Any], params: Optional[dict] = None) -> List[Ac
             Action(
                 id=action.get("id"),
                 name=action.get("name", "Unknown"),
-                assets=action.get("assets", []),
+                assets=[AssignedAsset(**d) for d in action.get("assets") or []],
             )
         )
     return formatted_actions

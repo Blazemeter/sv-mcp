@@ -52,6 +52,19 @@ class ServiceManager:
             json=service_body
         )
 
+    async def update(self, workspace_id: int, id: int, service_name: str) -> BaseResult:
+        service_body = {
+            "name": service_name,
+        }
+        return await vs_api_request(
+            self.token,
+            "PUT",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_SERVICES_ENDPOINT}/{id}",
+            result_formatter=format_services,
+            json=service_body
+        )
+
+
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_service",
@@ -72,6 +85,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 service_name (str): Mandatory. The required name of the service to create.
                 workspace_id (int): Mandatory. The id of the workspace to create service in.
+        - update: Update service.
+            args(dict): Dictionary with the following required parameters:
+                workspace_id (int): Mandatory. The id of the workspace to update service in.
+                id (int): Mandatory. The id of the service for update.
+                service_name (str): Mandatory. The new name of the service.
         Service Schema:
         """ + str(Service.model_json_schema())
     )
@@ -86,6 +104,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                                                       args.get("offset", 0))
                 case "create":
                     return await service_manager.create(args["service_name"], args["workspace_id"])
+                case "update":
+                    return await service_manager.update(args["workspace_id"], args["id"], args["service_name"])
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in service manager tool"

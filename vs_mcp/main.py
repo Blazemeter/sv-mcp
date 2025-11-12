@@ -11,7 +11,7 @@ from vs_mcp.config.token import BzmToken, BzmTokenError
 from vs_mcp.config.version import __version__, __executable__
 from server import register_tools
 
-BLAZEMETER_API_KEY_FILE_PATH = os.getenv('BLAZEMETER_API_KEY')
+BLAZEMETER_API_KEY_FILE_PATH = os.getenv('API_KEY_PATH')
 
 LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 

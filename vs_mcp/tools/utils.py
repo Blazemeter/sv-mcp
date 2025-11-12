@@ -34,7 +34,7 @@ async def _api_request(base_url: str,
     """
     if not token:
         return BaseResult(
-            error="No API token. Set BLAZEMETER_API_KEY env var with file path or API_KEY_ID and API_KEY_SECRET secrets in docker catalog configuration."
+            error="No API token. Set API_KEY_PATH env var with file path or API_KEY_ID and API_KEY_SECRET secrets in docker catalog configuration."
         )
 
     headers = _build_headers(token, kwargs.pop("headers", {}))

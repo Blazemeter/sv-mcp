@@ -52,7 +52,7 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
             "--mcp"
           ],
           "env": {
-            "BLAZEMETER_API_KEY": "path to the api-keys.json file"
+            "API_KEY_PATH": "path to the api-keys.json file"
           }
         }
   }
@@ -119,11 +119,12 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 ### **Service Management**
 **What it does:**  Creates and manages services.
 
-| Action              | What you get                    |
-|---------------------|---------------------------------|
-| Create a new service | A service with provided name    |
-| Get service         | A workspace service information |
-| List services       | All services in a workspace     |
+| Action                     | What you get                          |
+|----------------------------|---------------------------------------|
+| Create a new service       | A service with provided name          |
+| Update an existing service | An updated service with provided name |
+| Get service                | A workspace service information       |
+| List services              | All services in a workspace           |
 
 ---
 
@@ -317,7 +318,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "--mcp"
       ],
       "env": {
-        "BLAZEMETER_API_KEY": "path to api key file /.../api-key.json"
+        "API_KEY_PATH": "path to api key file /.../api-key.json"
       }
     }
   }
@@ -349,6 +350,8 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "-i",
         "--mount",
         "type=bind,source=/path/to/your/test/files,target=/home/bzm-mcp/working_directory/",
+        "-e",
+        "MCP_DOCKER=true",
         "-e", 
         "VS_URL=https://ci-mock.blazemeter.net/api/v1", //OPTIONAL: only if you want to use non-prod environmen
         "-e", 

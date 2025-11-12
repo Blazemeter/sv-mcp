@@ -32,6 +32,8 @@ RUN python build.py
 # ----------------------------
 FROM python:3.12-slim AS runtime
 
+ENV MCP_DOCKER=true
+
 WORKDIR /app
 
 # Copy the statically named binary

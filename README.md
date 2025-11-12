@@ -350,8 +350,6 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "-i",
         "--mount",
         "type=bind,source=/path/to/your/test/files,target=/home/bzm-mcp/working_directory/",
-        "-e",
-        "MCP_DOCKER=true",
         "-e", 
         "VS_URL=https://ci-mock.blazemeter.net/api/v1", //OPTIONAL: only if you want to use non-prod environmen
         "-e", 

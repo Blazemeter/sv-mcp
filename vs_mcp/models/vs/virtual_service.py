@@ -3,6 +3,7 @@ from typing import Optional, List
 from pydantic import BaseModel, Field
 
 from vs_mcp.models.vs.assigned_asset import AssignedAsset
+from vs_mcp.models.vs.broker_configuration import BrokerConfiguration
 from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 from vs_mcp.models.vs.proxy_configuration import ProxyConfiguration
 
@@ -55,7 +56,10 @@ class VirtualService(BaseModel):
         description="Http runner enabled flag, must be enabled for virtual services with 'TRANSACTIONAL' type."
     )
     proxy: Optional[ProxyConfiguration] = Field(None, description="Proxy configuration for the virtual service")
+    brokerConfig: Optional[BrokerConfiguration] = Field(None,
+                                                        description="Messaging broker configuration for the virtual service")
     assets: Optional[List[AssignedAsset]] = Field(None, description="List of assets")
+
     class Config:
         extra = "ignore"
 

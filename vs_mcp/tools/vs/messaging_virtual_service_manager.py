@@ -14,7 +14,7 @@ from vs_mcp.models.vs.virtual_service import VirtualService, ActionResult
 from vs_mcp.tools.utils import vs_api_request
 
 
-class VirtualServiceManager:
+class MessagingVirtualServiceManager:
 
     def __init__(self, token: Optional[BzmToken], ctx: Context):
         self.token = token
@@ -40,16 +40,20 @@ class VirtualServiceManager:
             params=params
         )
 
-    async def create(
+    async def create_mq9(
             self,
             workspace_id: int,
             vs_name: str,
             service_id: int,
             harborId: str,
             shipId: str,
-            noMatchingRequestPreference: str,
-            endpointPreference: str,
-            mock_service_transactions: List[MockServiceTransaction]
+            mock_service_transactions: List[MockServiceTransaction],
+            mq9_broker_hostname: str,
+            mq9_broker_port: int,
+            mq9_broker_channel: str,
+            mq9_queue_manager: str,
+            mq9_queue_username: str,
+            mq9_queue_password: str,
     ) -> BaseResult:
         transactions_list = (
             [txn.model_dump() for txn in mock_service_transactions]
@@ -62,15 +66,24 @@ class VirtualServiceManager:
         vs_body = {
             "name": vs_name,
             "serviceId": service_id,
-            "type": "TRANSACTIONAL",
+            "type": "MESSAGING",
             "harborId": harborId,
             "shipId": shipId,
             "replicas": 1,
             "mockServiceTransactions": transactions_list,
-            "noMatchingRequestPreference": noMatchingRequestPreference,
-            "endpointPreference": endpointPreference,
-            "httpRunnerEnabled": True,
+            "messagingRunnerEnabled": True,
         }
+
+        broker_config = {
+            "brokerType": "IBM_MQ9",
+            "hostname": mq9_broker_hostname,
+            "port": mq9_broker_port,
+            "channel": mq9_broker_channel,
+            "queueManager": mq9_queue_manager,
+            "username": mq9_queue_username,
+            "password": mq9_queue_password,
+        }
+        vs_body["brokerConfig"] = broker_config
 
         params = {"serviceId": service_id}
         return await vs_api_request(
@@ -82,7 +95,7 @@ class VirtualServiceManager:
             params=params,
         )
 
-    async def update(
+    async def update_mq9(
             self,
             workspace_id: int,
             vs_id: int,
@@ -90,9 +103,13 @@ class VirtualServiceManager:
             service_id: Optional[int],
             harborId: Optional[str],
             shipId: Optional[str],
-            noMatchingRequestPreference: Optional[str],
-            endpointPreference: Optional[str],
             mock_service_transactions: Optional[List[MockServiceTransaction]],
+            mq9_broker_hostname: str,
+            mq9_broker_port: int,
+            mq9_broker_channel: str,
+            mq9_queue_manager: str,
+            mq9_queue_username: str,
+            mq9_queue_password: str,
     ) -> BaseResult:
         update_request = {"id": vs_id, "workspaceId": workspace_id}
 
@@ -104,12 +121,17 @@ class VirtualServiceManager:
             update_request["harborId"] = harborId
         if shipId is not None:
             update_request["shipId"] = shipId
-        if noMatchingRequestPreference is not None:
-            update_request["noMatchingRequestPreference"] = noMatchingRequestPreference
-        if endpointPreference is not None:
-            update_request["endpointPreference"] = endpointPreference
-        update_request["httpRunnerEnabled"] = True
-
+        update_request["messagingRunnerEnabled"] = True
+        broker_config = {
+            "brokerType": "IBM_MQ9",
+            "hostname": mq9_broker_hostname,
+            "port": mq9_broker_port,
+            "channel": mq9_broker_channel,
+            "queueManager": mq9_queue_manager,
+            "username": mq9_queue_username,
+            "password": mq9_queue_password,
+        }
+        update_request["brokerConfig"] = broker_config
         if mock_service_transactions is not None:
             transactions_list = (
                 [txn.model_dump() for txn in mock_service_transactions]
@@ -152,7 +174,9 @@ class VirtualServiceManager:
             result_formatter=format_virtual_services_action,
         )
 
-    async def assign_transactions(self, workspace_id: int, vs_id: int, transaction_ids: List[int]) -> BaseResult:
+    async def assign_transactions(self, workspace_id: int, vs_id: int, transaction_ids: List[int],
+                                  source_name: str, source_type: str,
+                                  destination_name: str, destination_type: str) -> BaseResult:
         vs_body = {"includeIds": transaction_ids}
         return await vs_api_request(
             self.token,
@@ -229,28 +253,30 @@ class VirtualServiceManager:
             json=update_request,
         )
 
-    async def apply_template(self, workspace_id: int, vs_id: int, template_id: int) -> BaseResult:
+    async def assign_queue(self, id: int, workspace_id: int, queue_name: str) -> BaseResult:
         return await vs_api_request(
             self.token,
             "PATCH",
-            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}/apply-template/{template_id}",
-            result_formatter=format_virtual_services_action
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}/assign-queue/{queue_name}",
+            result_formatter=format_virtual_services
         )
 
-    async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
-        assert_type_body = {
-            "assetId": assetId,
-            "usageType": type,
-            "alias": alias
-        }
+    async def assign_topic(self, id: int, workspace_id: int, topic_name: str) -> BaseResult:
         return await vs_api_request(
             self.token,
             "PATCH",
-            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}/assign-asset",
-            result_formatter=format_virtual_services,
-            json=assert_type_body
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}/assign-topic/{topic_name}",
+            result_formatter=format_virtual_services
         )
 
+    async def assign_flow(self, id: int, workspace_id: int, source_name: str, source_type,
+                          destination_name: str, destination_type) -> BaseResult:
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{id}/assign-flow/{topic_name}",
+            result_formatter=format_virtual_services
+        )
 
 def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
@@ -269,25 +295,33 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 serviceId (int): Optional. The id of the service to list virtual services from. Without this it will list all virtual services in the workspace.
                 limit (int, default=10, valid=[1 to 50]): The number of virtual services to list.
                 offset (int, default=0): Number of virtual services to skip.
-        - create: Create a new virtual service.
+        - create-mq9: Create an IBM MQ9 messaging virtual service.
             args(VirtualService): A virtual service object with the following fields:
                 workspace_id (int): Mandatory. The id of the workspace.
                 name (str): Mandatory. The name of the virtual service.
                 serviceId (int): Mandatory. The id of the service to create the virtual service in.
-                harborId (str): Mandatory. The location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
-                shipId (str): Mandatory. The location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
-                endpointPreference (str): Mandatory. If not specified use 'HTTPS'.
-                noMatchingRequestPreference (str): Mandatory. If not specified use 'return404'.
-        - update: Update an existing new virtual service.
+                harborId (str): Mandatory. The location harbor id.
+                shipId (str): Mandatory. The location ship id.
+                mq9_broker_hostname(str): Mandatory. The hostname of the IBM MQ9 broker.          
+                mq9_broker_port(str): Mandatory. The port of the IBM MQ9 broker.          
+                mq9_broker_channel(str): Mandatory. The IBM MQ9 channel name.          
+                mq9_queue_manager(str): Mandatory. The IBM MQ9 queue manager name.          
+                mq9_queue_username(str): Mandatory. The IBM MQ9 broker username.          
+                mq9_queue_password(str): Mandatory. The IBM MQ9 broker password.          
+        - update-mq9: Update an existing IBM MQ9 virtual service.
             args(VirtualService): A virtual service object with the following fields:
                 workspace_id (int): Mandatory. The id of the workspace.
                 vs_id (int): Mandatory. The id of the virtual service.
                 name (str): Optional. The name of the virtual service.
                 serviceId (int): Optional. The id of the service to create the virtual service in.
-                harborId (str): Optional. The location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
-                shipId (str): Optional. The location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
-                endpointPreference (str): Optional. If not specified use 'HTTPS'.
-                noMatchingRequestPreference (str): Optional. If not specified use 'return404'.
+                harborId (str): Optional. The location harbor id.
+                shipId (str): Optional. The location ship id.
+                mq9_broker_hostname(str): Optional. The hostname of the IBM MQ9 broker.          
+                mq9_broker_port(str): Optional. The port of the IBM MQ9 broker.          
+                mq9_broker_channel(str): Optional. The IBM MQ9 channel name.          
+                mq9_queue_manager(str): Optional. The IBM MQ9 queue manager name.          
+                mq9_queue_username(str): Optional. The IBM MQ9 broker username.          
+                mq9_queue_password(str): Optional. The IBM MQ9 broker password.   
         - deploy: Deploy a virtual service. Deploys the virtual service to the specified harbor and ship.
             Action result contains tracking id to track the deployment. Use tracking tool to track the deployment.
             Deployment is finished, when tracking status is 'FINISHED'. If deployment fails, tracking status is 'FAILED'. 
@@ -336,35 +370,28 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
                 id (int): Mandatory. The id of the virtual service to remove proxy.     
-        - apply_template: Applies virtual service template settings to the virtual service.
-            Result contains tracking id to track the update action. Use tracking tool to track the update action.
-            args(dict): Dictionary with the following required parameters:
-                workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
-                id (int): Mandatory. The id of the virtual service to remove proxy.
-                template_id (int): Mandatory. The id of the virtual service template.
-        - assign_keystore: Assign Keystore asset to the Virtual Service.
+        - assign_queue: Assign Queue to the Messaging Virtual Service.
             args(dict):
                 id (int): Mandatory. The id of the Virtual Service.
-                asset_id (int): Mandatory. The id of the keystore asset to assign.
-                alias (str): Mandatory. The certificate alias to use.
-                workspace_id (int): Mandatory. The id of the workspace.  
-        - assign_keystore_truststore: Assign Keystore asset to the Virtual Service. Asset will be used as both Keystore and Truststore.
-                Use this action for 2way ssl setup.
+                workspace_id (int): Mandatory. The id of the workspace.    
+                queue_name (str): Mandatory. The queue name.    
+        - assign_topic: Assign Topic to the Messaging Virtual Service.
             args(dict):
                 id (int): Mandatory. The id of the Virtual Service.
-                asset_id (int): Mandatory. The id of the certificate asset to assign.
-                workspace_id (int): Mandatory. The id of the workspace.       
+                workspace_id (int): Mandatory. The id of the workspace.    
+                topic_name (str): Mandatory. The topic name.    
+                                  
         VirtualService Schema (including full MockServiceTransaction):
         """ + str(VirtualService.model_json_schema()) + """
         Virtual service deploy/stop/update/delete actions result schema:
         """ + str(ActionResult.model_json_schema())
     )
-    async def virtual_service(
+    async def messaging_virtual_service(
             action: str,
             args: Annotated[Dict[str, Any], VirtualService.model_json_schema()],
             ctx: Context,
     ) -> BaseResult:
-        vs_manager = VirtualServiceManager(token, ctx)
+        vs_manager = MessagingVirtualServiceManager(token, ctx)
         try:
             match action:
                 case "deploy":
@@ -382,28 +409,36 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args.get("limit", 50),
                         args.get("offset", 0),
                     )
-                case "create":
-                    return await vs_manager.create(
+                case "create-mq9":
+                    return await vs_manager.create_mq9(
                         args["workspace_id"],
                         args["name"],
                         args["serviceId"],
                         args["harborId"],
                         args["shipId"],
-                        args.get("noMatchingRequestPreference", "return404"),
-                        args.get("endpointPreference", "HTTPS"),
                         args.get("mockServiceTransactions", []),
+                        args.get("mq9_broker_hostname"),
+                        args.get("mq9_broker_port"),
+                        args.get("mq9_broker_channel"),
+                        args.get("mq9_queue_manager"),
+                        args.get("mq9_queue_username"),
+                        args.get("mq9_queue_password"),
                     )
-                case "update":
-                    return await vs_manager.update(
+                case "update-mq9":
+                    return await vs_manager.update_mq9(
                         args["workspace_id"],
                         args["vs_id"],
                         args.get("name"),
                         args.get("serviceId"),
                         args.get("harborId"),
                         args.get("shipId"),
-                        args.get("noMatchingRequestPreference"),
-                        args.get("endpointPreference"),
                         args.get("mockServiceTransactions", []),
+                        args.get("mq9_broker_hostname"),
+                        args.get("mq9_broker_port"),
+                        args.get("mq9_broker_channel"),
+                        args.get("mq9_queue_manager"),
+                        args.get("mq9_queue_username"),
+                        args.get("mq9_queue_password"),
                     )
                 case "assign_transactions":
                     return await vs_manager.assign_transactions(
@@ -430,25 +465,17 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await vs_manager.unset_proxy(
                         args["workspace_id"], args["id"]
                     )
-                case "apply_template":
-                    return await vs_manager.apply_template(
-                        args["workspace_id"], args["id"], args["template_id"]
-                    )
-                case "assign_keystore_truststore":
-                    return await vs_manager.assign_asset(
+                case "assign_queue":
+                    return await vs_manager.assign_queue(
                         args["id"],
                         args["workspace_id"],
-                        "SERVER_KEYSTORE_TRUSTSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["queue_name"],
                     )
-                case "assign_keystore":
-                    return await vs_manager.assign_asset(
+                case "assign_topic":
+                    return await vs_manager.assign_topic(
                         args["id"],
                         args["workspace_id"],
-                        "SERVER_KEYSTORE",
-                        args["asset_id"],
-                        None,
+                        args["topic_name"],
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")

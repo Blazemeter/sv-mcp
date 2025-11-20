@@ -337,7 +337,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 
 ### **MCP Client Configuration for Docker**
  Build dokcer image using the following command:
- ```docker build . -t bzm-mcp:latest ```
+ ```docker build . -t vs-mcp:latest ```
 
 ```json
 {

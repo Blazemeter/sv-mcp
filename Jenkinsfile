@@ -34,7 +34,7 @@ pipeline {
     environment {
         project = 'Virtual-Services-MCP-Server'
         DOCKER_REPO = 'vs-mcp'
-        IMAGE_NAME = 'gcr.io/verdant-bulwark-278/vs-mcp'
+        IMAGE_NAME = 'us.gcr.io/verdant-bulwark-278/vs-mcp'
         TMPDIR = '/tmp'
         SENDER = 'jenkins@blazemeter.com'
     }
@@ -157,6 +157,7 @@ pipeline {
                     }
                     tags.addTag(BUILD_NUMBER.toString())
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
+                    tags.addTag('latest')
                     
                     pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
                     

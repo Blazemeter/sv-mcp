@@ -158,9 +158,7 @@ pipeline {
                     tags.addTag(BUILD_NUMBER.toString())
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     
-                    lock(label: 'Gcloud-VS-MCP') {
-                        pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
-                    }
+                    pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
                     
                     def buildManager = new BuildResultManager(this)
                     def buildResult = new PackageBuildResult(env.DOCKER_REPO, tags.allTags[0])

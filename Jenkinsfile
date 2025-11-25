@@ -144,6 +144,8 @@ pipeline {
                     // Add branch-build tag
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     
+                    echo "Tags to be applied: ${tags.allTags}"
+                    
                     // Convert tag names to full image references for BuildkitManager
                     def fullImageTags = tags.allTags.collect { tag -> 
                         "${env.IMAGE_NAME}:${tag}"
@@ -158,7 +160,8 @@ pipeline {
                                 "BUILD_NUMBER=${env.BUILD_NUMBER}",
                                 "BRANCH_NAME=${env.CURRENT_BRANCH}",
                                 "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}"
+                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}",
+                                "CACHEBUST=${currentBuild.startTimeInMillis}" // Force new image per build
                             ]
                         )
                     }

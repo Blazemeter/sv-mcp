@@ -128,26 +128,31 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Generate base tags
-                    tags = getPrDockerDetailedTag(env.CURRENT_BRANCH, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
+                    // Create custom tags list
+                    def tagsList = []
                     
-                    // Add branch-specific tags
-                    if (env.CURRENT_BRANCH.contains('release')) {
-                        tags.addTag('latest-release')
-                    }
+                    // Add build number tag
+                    tagsList.add(env.BUILD_NUMBER.toString())
+                    
+                    // Add branch-sha-build tag
+                    def sanitisedBranch = sanitiseBranchName(env.CURRENT_BRANCH)
+                    def shortSha = checkoutVars.GIT_COMMIT.take(5)
+                    tagsList.add("${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}")
                     
                     // Only add 'latest' tag for master and develop branches
                     if (env.CURRENT_BRANCH == 'develop' || env.CURRENT_BRANCH == 'master') {
-                        tags.addTag('latest')
+                        tagsList.add('latest')
                     }
                     
-                    // Add branch-build tag
-                    tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
+                    // Add latest-release for release branches
+                    if (env.CURRENT_BRANCH.contains('release')) {
+                        tagsList.add('latest-release')
+                    }
                     
-                    echo "Tags to be applied: ${tags.allTags}"
+                    echo "Tags to be applied: ${tagsList}"
                     
                     // Convert tag names to full image references for BuildkitManager
-                    def fullImageTags = tags.allTags.collect { tag -> 
+                    def fullImageTags = tagsList.collect { tag -> 
                         "${env.IMAGE_NAME}:${tag}"
                     }
                     
@@ -168,7 +173,7 @@ pipeline {
                     
                     // Archive build results
                     def buildManager = new BuildResultManager(this)
-                    def buildResult = new PackageBuildResult(env.DOCKER_REPO, tags.allTags[0])
+                    def buildResult = new PackageBuildResult(env.DOCKER_REPO, tagsList[0])
                     buildManager.archiveResultsFromBuildResult(buildResult)
                 }
             }

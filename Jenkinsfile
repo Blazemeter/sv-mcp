@@ -42,6 +42,9 @@ pipeline {
                 script {
                     cleanCheckout()
                     
+                    // Configure git safe.directory to avoid dubious ownership errors
+                    sh 'git config --global --add safe.directory "*"'
+                    
                     // Determine if this is a PR build
                     env.IS_PR = env.CHANGE_ID ? 'true' : 'false'
                     

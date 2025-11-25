@@ -44,6 +44,15 @@ pipeline {
                     
                     // Determine if this is a PR build
                     env.IS_PR = env.CHANGE_ID ? 'true' : 'false'
+                    
+                    // Get branch name - handle cases where BRANCH_NAME is null
+                    if (!env.BRANCH_NAME) {
+                        env.BRANCH_NAME = sh(
+                            script: 'git rev-parse --abbrev-ref HEAD',
+                            returnStdout: true
+                        ).trim()
+                    }
+                    
                     echo "Is Pull Request: ${env.IS_PR}"
                     echo "Branch: ${env.BRANCH_NAME}"
                 }
@@ -102,7 +111,15 @@ pipeline {
         stage('Determine Version') {
             steps {
                 script {
-                    if (env.BRANCH_NAME == 'master') {
+                    // Ensure BRANCH_NAME is set
+                    def branchName = env.BRANCH_NAME ?: sh(
+                        script: 'git rev-parse --abbrev-ref HEAD',
+                        returnStdout: true
+                    ).trim()
+                    
+                    echo "Determining version for branch: ${branchName}"
+                    
+                    if (branchName == 'master' || branchName == 'main') {
                         // Auto-increment version for master branch builds
                         def currentVersion = sh(
                             script: "grep '^version = ' ${VERSION_FILE} | sed 's/version = \"\\(.*\\)\"/\\1/'",
@@ -137,7 +154,7 @@ pipeline {
                         echo "PR version: ${env.IMAGE_VERSION}"
                     } else {
                         // For feature branches, use branch name and build number
-                        def safeBranchName = env.BRANCH_NAME.replaceAll('[^a-zA-Z0-9]', '-').toLowerCase()
+                        def safeBranchName = branchName.replaceAll('[^a-zA-Z0-9]', '-').toLowerCase()
                         env.IMAGE_VERSION = "${safeBranchName}-${env.BUILD_NUMBER}"
                         env.DOCKER_TAGS = env.IMAGE_VERSION
                         echo "Branch version: ${env.IMAGE_VERSION}"
@@ -209,7 +226,8 @@ pipeline {
             when {
                 expression { 
                     // Only push to registry from master or when explicitly needed
-                    return env.BRANCH_NAME == 'master' || env.IS_PR == 'false'
+                    def branchName = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    return branchName == 'master' || branchName == 'main' || env.IS_PR == 'false'
                 }
             }
             steps {
@@ -227,7 +245,10 @@ pipeline {
 
         stage('Commit Version Update') {
             when {
-                expression { return env.BRANCH_NAME == 'master' }
+                expression { 
+                    def branchName = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
+                    return branchName == 'master' || branchName == 'main'
+                }
             }
             steps {
                 script {
@@ -256,10 +277,11 @@ pipeline {
     post {
         success {
             script {
+                def branchName = env.BRANCH_NAME ?: 'unknown'
                 def message = "✅ Build Successful\n"
-                message += "Branch: ${env.BRANCH_NAME}\n"
+                message += "Branch: ${branchName}\n"
                 message += "Version: ${env.IMAGE_VERSION}\n"
-                if (env.BRANCH_NAME == 'master' || env.IS_PR == 'false') {
+                if (branchName == 'master' || branchName == 'main' || env.IS_PR == 'false') {
                     message += "Image: ${env.PRIMARY_IMAGE_TAG}\n"
                 }
                 echo message
@@ -267,8 +289,9 @@ pipeline {
         }
         failure {
             script {
+                def branchName = env.BRANCH_NAME ?: 'unknown'
                 def message = "❌ Build Failed\n"
-                message += "Branch: ${env.BRANCH_NAME}\n"
+                message += "Branch: ${branchName}\n"
                 message += "Check console output for details"
                 echo message
             }

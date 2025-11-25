@@ -54,9 +54,10 @@ pipeline {
             steps {
                 script {
                     clearWorkspace()
-                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.BRANCH_NAME)
-                    allowSafeDir = sh script: 'git config --global --add safe.directory "*"', returnStdout: true
+                    sh 'git config --global --add safe.directory "*"'
+                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', "*/${env.BRANCH_NAME}")
                     dir("Virtual-Services-MCP-Server") {
+                        sh 'git config --global --add safe.directory "*"'
                         commitDate = sh script: 'git log -1 --format="%ad %H"', returnStdout: true
                         sh """
                             echo -n '$JOB_NAME $BUILD_NUMBER $env.BRANCH_NAME $checkoutVars.GIT_COMMIT $commitDate' > Version.html
@@ -188,14 +189,16 @@ pipeline {
         always {
             smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
             script {
-                buildkit.cleanup()
                 if (!env.skippedBuild) {
                     PullRequestUtils.updateBranchPullRequestsStatuses(this)
                 }
             }
         }
         failure {
-            notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+            script {
+                sh 'git config --global --add safe.directory "*"'
+                notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+            }
         }
     }
 }

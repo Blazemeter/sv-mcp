@@ -57,7 +57,7 @@ pipeline {
         stage('Clone') {
             steps {
                 script {
-                    clearWorkspace()
+                    // clearWorkspace() // Disabled for now until pipeline works
                     sh 'git config --global --add safe.directory "*"'
                     
                     checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.CURRENT_BRANCH)

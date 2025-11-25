@@ -144,9 +144,11 @@ pipeline {
             }
         }
         
-        stage('Push to Registry') {
+        stage('Archive Build Results') {
             steps {
                 script {
+                    // Images already pushed by BuildkitManager during build stage
+                    // Just archive the build results for tracking
                     tags = getPrDockerDetailedTag(env.CURRENT_BRANCH, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
                     
                     if (env.CURRENT_BRANCH.contains('release')) {
@@ -158,8 +160,6 @@ pipeline {
                     tags.addTag(BUILD_NUMBER.toString())
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     tags.addTag('latest')
-                    
-                    pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
                     
                     def buildManager = new BuildResultManager(this)
                     def buildResult = new PackageBuildResult(env.DOCKER_REPO, tags.allTags[0])

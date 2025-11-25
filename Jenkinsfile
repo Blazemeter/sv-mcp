@@ -61,7 +61,7 @@ pipeline {
         stage('Clone') {
             steps {
                 script {
-                    // clearWorkspace() // Disabled for now until pipeline works
+                    clearWorkspace()
                     sh 'git config --global --add safe.directory "*"'
                     
                     checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.CURRENT_BRANCH)
@@ -195,7 +195,7 @@ pipeline {
     
     post {
         always {
-            // smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
+            smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
             script {
                 if (!env.skippedBuild) {
                     PullRequestUtils.updateBranchPullRequestsStatuses(this)
@@ -205,7 +205,7 @@ pipeline {
         failure {
             script {
                 sh 'git config --global --add safe.directory "*"'
-                // notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+                notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
             }
         }
     }

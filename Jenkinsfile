@@ -201,7 +201,10 @@ pipeline {
     
     post {
         always {
-            smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
+            smartSlackNotification(
+                alternateJobTitle: 'VS-MCP package build',
+                notifyOnSuccess: true
+            )
             script {
                 if (!env.skippedBuild) {
                     PullRequestUtils.updateBranchPullRequestsStatuses(this)

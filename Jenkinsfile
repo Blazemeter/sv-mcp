@@ -141,11 +141,16 @@ pipeline {
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     tags.addTag('latest')
                     
+                    // Convert tag names to full image references for BuildkitManager
+                    def fullImageTags = tags.allTags.collect { tag -> 
+                        "${env.IMAGE_NAME}:${tag}"
+                    }
+                    
                     dir("Virtual-Services-MCP-Server") {
                         buildkit.build(
                             dockerFile: "Dockerfile",
                             imageName: env.DOCKER_REPO,
-                            tags: tags,
+                            tags: fullImageTags,
                             buildArgs: [
                                 "BUILD_NUMBER=${env.BUILD_NUMBER}",
                                 "BRANCH_NAME=${env.CURRENT_BRANCH}",

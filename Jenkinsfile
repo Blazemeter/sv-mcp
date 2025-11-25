@@ -7,18 +7,13 @@ import com.blazemeter.pr.BuildResultManager
 
 BuildkitManager buildkit = new BuildkitManager(this)
 
-DOCKER_REPO = 'vs-mcp'
-IMAGE_NAME = 'gcr.io/verdant-bulwark-278/vs-mcp'
-def isCodeScan = isCodeScan()
-def podYaml = libraryResource 'podTemplates/jenkins-docker-agent-master-latest.yaml'
-
 properties([pipelineTriggers([githubPush()])]) //Enable Git webhook triggering
 
 pipeline {
     parameters {
         booleanParam(name: 'PERFORM_PRISMA_SCAN', defaultValue: true, description: 'Perform a Prisma scan for the Docker image')
         booleanParam(name: 'FAIL_JOB_ON_SCAN_FAILURES', defaultValue: false, description: 'If checked, Twistlock vulnerabilities scan will enforce job failure.')
-        booleanParam(name: 'PERFORM_WHITESOURCE_SCAN', defaultValue: isCodeScan, description: 'Perform a WhiteSource scan for the code')
+        booleanParam(name: 'PERFORM_WHITESOURCE_SCAN', defaultValue: true, description: 'Perform a WhiteSource scan for the code')
     }
     
     options {
@@ -30,7 +25,7 @@ pipeline {
 
     agent {
         kubernetes {
-            yaml podYaml
+            yaml agentYaml()
             defaultContainer 'jenkins-docker-agent'
             workspaceVolume dynamicPVC(accessModes: 'ReadWriteOnce', requestsSize: "5Gi", storageClassName: "standard-rwo")
         }
@@ -38,6 +33,8 @@ pipeline {
     
     environment {
         project = 'Virtual-Services-MCP-Server'
+        DOCKER_REPO = 'vs-mcp'
+        IMAGE_NAME = 'gcr.io/verdant-bulwark-278/vs-mcp'
         TMPDIR = '/tmp'
         SENDER = 'jenkins@blazemeter.com'
     }
@@ -124,7 +121,7 @@ pipeline {
                     dir("Virtual-Services-MCP-Server") {
                         buildkit.build(
                             dockerFile: "Dockerfile",
-                            imageName: DOCKER_REPO,
+                            imageName: env.DOCKER_REPO,
                             buildArgs: [
                                 "BUILD_NUMBER=${env.BUILD_NUMBER}",
                                 "BRANCH_NAME=${env.BRANCH_NAME}",
@@ -152,11 +149,11 @@ pipeline {
                     tags.addTag("${env.BRANCH_NAME}-${env.BUILD_NUMBER}")
                     
                     lock(label: 'Gcloud-VS-MCP') {
-                        pushImageToAllRegistries(DOCKER_REPO, DOCKER_REPO, tags, buildkit)
+                        pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
                     }
                     
                     def buildManager = new BuildResultManager(this)
-                    def buildResult = new PackageBuildResult(DOCKER_REPO, tags.allTags[0])
+                    def buildResult = new PackageBuildResult(env.DOCKER_REPO, tags.allTags[0])
                     buildManager.archiveResultsFromBuildResult(buildResult)
                 }
             }
@@ -179,7 +176,7 @@ pipeline {
                 script {
                     TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
                     runPrismaCloudScanOnK8s(
-                        imageTag: "${IMAGE_NAME}:${TAG}",
+                        imageTag: "${env.IMAGE_NAME}:${TAG}",
                         buildkitManager: buildkit
                     )
                 }

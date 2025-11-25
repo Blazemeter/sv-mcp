@@ -1,310 +1,204 @@
 @Library('jenkins_library')
 import com.blazemeter.buildkit.BuildkitManager
 import com.blazemeter.pr.PullRequestUtils
+import com.blazemeter.pr.PullRequestStatus
+import com.blazemeter.pr.PackageBuildResult
+import com.blazemeter.pr.BuildResultManager
 
 BuildkitManager buildkit = new BuildkitManager(this)
 
+DOCKER_REPO = 'vs-mcp'
+IMAGE_NAME = 'gcr.io/verdant-bulwark-278/vs-mcp'
+def isCodeScan = isCodeScan()
+def podYaml = libraryResource 'podTemplates/jenkins-docker-agent-master-latest.yaml'
+
+properties([pipelineTriggers([githubPush()])]) //Enable Git webhook triggering
+
 pipeline {
-    agent {
-        kubernetes {
-            yaml agentYaml()
-            defaultContainer 'jenkins-docker-agent'
-            workspaceVolume dynamicPVC(accessModes: 'ReadWriteOnce', requestsSize: "5Gi", storageClassName: "standard-rwo")
-            retries 2
-        }
-    }
-
     parameters {
-        booleanParam(name: 'PERFORM_PRISMACLOUD_SCAN', defaultValue: true, description: 'Perform PrismaCloud security scan on Docker image')
-        booleanParam(name: 'PERFORM_WHITESOURCE_SCAN', defaultValue: true, description: 'Perform WhiteSource scan for dependencies')
-        booleanParam(name: 'SKIP_TESTS', defaultValue: false, description: 'Skip running tests')
+        booleanParam(name: 'PERFORM_PRISMA_SCAN', defaultValue: true, description: 'Perform a Prisma scan for the Docker image')
+        booleanParam(name: 'FAIL_JOB_ON_SCAN_FAILURES', defaultValue: false, description: 'If checked, Twistlock vulnerabilities scan will enforce job failure.')
+        booleanParam(name: 'PERFORM_WHITESOURCE_SCAN', defaultValue: isCodeScan, description: 'Perform a WhiteSource scan for the code')
     }
-
-    environment {
-        DOCKER_IMAGE_NAME = 'vs-mcp'
-        DOCKER_REGISTRY = 'gcr.io/verdant-bulwark-278'
-        PROJECT_NAME = 'virtual-services-mcp'
-        PYTHON_VERSION = '3.12'
-        // Version file path
-        VERSION_FILE = 'pyproject.toml'
-    }
-
+    
     options {
-        buildDiscarder(logRotator(numToKeepStr: '30', daysToKeepStr: '30'))
+        buildDiscarder(logRotator(numToKeepStr: '100', daysToKeepStr: '45'))
+        ansiColor('xterm')
         timestamps()
-        timeout(time: 1, unit: 'HOURS')
         disableConcurrentBuilds()
     }
 
+    agent {
+        kubernetes {
+            yaml podYaml
+            defaultContainer 'jenkins-docker-agent'
+            workspaceVolume dynamicPVC(accessModes: 'ReadWriteOnce', requestsSize: "5Gi", storageClassName: "standard-rwo")
+        }
+    }
+    
+    environment {
+        project = 'Virtual-Services-MCP-Server'
+        TMPDIR = '/tmp'
+        SENDER = 'jenkins@blazemeter.com'
+    }
+    
     stages {
-        stage('Checkout') {
+        stage('Setup') {
             steps {
                 script {
-                    cleanCheckout()
-                    
-                    // Configure git safe.directory to avoid dubious ownership errors
-                    sh 'git config --global --add safe.directory "*"'
-                    
-                    // Determine if this is a PR build
-                    env.IS_PR = env.CHANGE_ID ? 'true' : 'false'
-                    
-                    // Get branch name - handle cases where BRANCH_NAME is null
-                    if (!env.BRANCH_NAME) {
-                        env.BRANCH_NAME = sh(
-                            script: 'git rev-parse --abbrev-ref HEAD',
-                            returnStdout: true
-                        ).trim()
-                    }
-                    
-                    echo "Is Pull Request: ${env.IS_PR}"
-                    echo "Branch: ${env.BRANCH_NAME}"
+                    PullRequestUtils.updateBranchPullRequestsStatuses(this, PullRequestStatus.PENDING)
+                    env.MODIFIED_BUILD_NUMBER = env.BUILD_NUMBER
+                    currentBuild.displayName = "#${MODIFIED_BUILD_NUMBER} | [Node] ${env.NODE_NAME} | ${env.BRANCH_NAME}"
                 }
             }
         }
-
+        
+        stage('Clone') {
+            steps {
+                script {
+                    clearWorkspace()
+                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.BRANCH_NAME)
+                    allowSafeDir = sh script: 'git config --global --add safe.directory "*"', returnStdout: true
+                    dir("Virtual-Services-MCP-Server") {
+                        commitDate = sh script: 'git log -1 --format="%ad %H"', returnStdout: true
+                        sh """
+                            echo -n '$JOB_NAME $BUILD_NUMBER $env.BRANCH_NAME $checkoutVars.GIT_COMMIT $commitDate' > Version.html
+                        """
+                    }
+                }
+            }
+        }
+        
         stage('Setup Python Environment') {
             steps {
                 script {
-                    echo "Setting up Python ${PYTHON_VERSION} environment"
-                    sh '''
-                        python3 --version
-                        pip3 --version
-                    '''
+                    dir("Virtual-Services-MCP-Server") {
+                        sh '''
+                            python3 --version
+                            pip3 --version
+                        '''
+                    }
                 }
             }
         }
-
+        
         stage('Install Dependencies') {
             steps {
                 script {
-                    echo "Installing project dependencies"
-                    sh '''
-                        pip3 install --no-cache-dir . --break-system-packages
-                        pip3 install --no-cache-dir pytest pytest-cov --break-system-packages
-                    '''
+                    dir("Virtual-Services-MCP-Server") {
+                        sh '''
+                            pip3 install --no-cache-dir . --break-system-packages
+                            pip3 install --no-cache-dir pytest pytest-cov --break-system-packages
+                        '''
+                    }
                 }
             }
         }
-
+        
         stage('Run Tests') {
-            when {
-                expression { return !params.SKIP_TESTS }
-            }
             steps {
                 script {
-                    echo "Running tests..."
-                    sh '''
-                        mkdir -p reports
-                        # Once tests are implemented, run them with:
-                        # pytest --junitxml=reports/junit-report.xml --cov=vs_mcp --cov-report=xml:reports/coverage.xml --cov-report=html:reports/htmlcov tests/
-                        
-                        # For now, create empty report to allow pipeline to proceed
-                        echo '<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="placeholder" tests="0" errors="0" failures="0" skipped="0"></testsuite></testsuites>' > reports/junit-report.xml
-                        echo "Tests will be executed once implemented"
-                    '''
+                    dir("Virtual-Services-MCP-Server") {
+                        sh '''
+                            mkdir -p reports
+                            # Once tests are implemented, run them with:
+                            # pytest --junitxml=reports/junit-report.xml --cov=vs_mcp --cov-report=xml:reports/coverage.xml tests/
+                            
+                            # For now, create empty report to allow pipeline to proceed
+                            echo '<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="placeholder" tests="0" errors="0" failures="0" skipped="0"></testsuite></testsuites>' > reports/junit-report.xml
+                            echo "Tests will be executed once implemented"
+                        '''
+                    }
                 }
             }
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
+                    junit allowEmptyResults: true, testResults: 'Virtual-Services-MCP-Server/reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
                 }
             }
         }
-
-        stage('Determine Version') {
-            steps {
-                script {
-                    // Ensure BRANCH_NAME is set
-                    def branchName = env.BRANCH_NAME ?: sh(
-                        script: 'git rev-parse --abbrev-ref HEAD',
-                        returnStdout: true
-                    ).trim()
-                    
-                    echo "Determining version for branch: ${branchName}"
-                    
-                    if (branchName == 'master' || branchName == 'main') {
-                        // Auto-increment version for master branch builds
-                        def currentVersion = sh(
-                            script: "grep '^version = ' ${VERSION_FILE} | sed 's/version = \"\\(.*\\)\"/\\1/'",
-                            returnStdout: true
-                        ).trim()
-                        
-                        echo "Current version: ${currentVersion}"
-                        
-                        // Parse version and increment patch
-                        def versionParts = currentVersion.tokenize('.')
-                        def major = versionParts[0]
-                        def minor = versionParts.size() > 1 ? versionParts[1] : '0'
-                        def patch = versionParts.size() > 2 ? versionParts[2].toInteger() + 1 : env.BUILD_NUMBER
-                        
-                        env.IMAGE_VERSION = "${major}.${minor}.${patch}"
-                        env.DOCKER_TAGS = "${env.IMAGE_VERSION},latest"
-                        
-                        echo "New version for master: ${env.IMAGE_VERSION}"
-                        
-                        // Update version in pyproject.toml
-                        sh """
-                            sed -i 's/^version = .*/version = "${env.IMAGE_VERSION}"/' ${VERSION_FILE}
-                            git config user.email "jenkins@blazemeter.com"
-                            git config user.name "Jenkins CI"
-                            git add ${VERSION_FILE}
-                            git diff --staged --quiet || git commit -m "Bump version to ${env.IMAGE_VERSION} [skip ci]"
-                        """
-                    } else if (env.IS_PR == 'true') {
-                        // For PRs, use PR number in version
-                        env.IMAGE_VERSION = "pr-${env.CHANGE_ID}-${env.BUILD_NUMBER}"
-                        env.DOCKER_TAGS = env.IMAGE_VERSION
-                        echo "PR version: ${env.IMAGE_VERSION}"
-                    } else {
-                        // For feature branches, use branch name and build number
-                        def safeBranchName = branchName.replaceAll('[^a-zA-Z0-9]', '-').toLowerCase()
-                        env.IMAGE_VERSION = "${safeBranchName}-${env.BUILD_NUMBER}"
-                        env.DOCKER_TAGS = env.IMAGE_VERSION
-                        echo "Branch version: ${env.IMAGE_VERSION}"
-                    }
-                }
-            }
-        }
-
+        
         stage('Build Docker Image') {
             steps {
                 script {
-                    echo "Building Docker image with tags: ${env.DOCKER_TAGS}"
-                    
-                    def tags = env.DOCKER_TAGS.split(',').collect { 
-                        "${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${it}" 
+                    dir("Virtual-Services-MCP-Server") {
+                        buildkit.build(
+                            dockerFile: "Dockerfile",
+                            imageName: DOCKER_REPO,
+                            buildArgs: [
+                                "BUILD_NUMBER=${env.BUILD_NUMBER}",
+                                "BRANCH_NAME=${env.BRANCH_NAME}",
+                                "BUILD_TIME=${currentBuild.startTimeInMillis}",
+                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}"
+                            ]
+                        )
                     }
-                    
-                    buildkit.build(
-                        dockerFile: "Dockerfile",
-                        imageName: DOCKER_IMAGE_NAME,
-                        tags: tags,
-                        buildArgs: [
-                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                            "BRANCH_NAME=${env.BRANCH_NAME}",
-                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                            "COMMIT_HASH=${env.GIT_COMMIT}"
-                        ]
-                    )
-                    
-                    // Store the primary tag for later stages
-                    env.PRIMARY_IMAGE_TAG = "${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${env.IMAGE_VERSION}"
                 }
             }
         }
-
-        stage('Perform PrismaCloud Scan') {
-            when { 
-                expression { 
-                    return params.PERFORM_PRISMACLOUD_SCAN 
-                } 
-            }
+        
+        stage('Push to Registry') {
             steps {
                 script {
-                    echo "Running PrismaCloud security scan on ${env.PRIMARY_IMAGE_TAG}"
+                    tags = getPrDockerDetailedTag(env.BRANCH_NAME, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
+                    
+                    if (env.BRANCH_NAME.contains('release')) {
+                        tags.addTag('latest-release')
+                    }
+                    if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'master') {
+                        tags.addTag('latest')
+                    }
+                    tags.addTag(BUILD_NUMBER.toString())
+                    tags.addTag("${env.BRANCH_NAME}-${env.BUILD_NUMBER}")
+                    
+                    lock(label: 'Gcloud-VS-MCP') {
+                        pushImageToAllRegistries(DOCKER_REPO, DOCKER_REPO, tags, buildkit)
+                    }
+                    
+                    def buildManager = new BuildResultManager(this)
+                    def buildResult = new PackageBuildResult(DOCKER_REPO, tags.allTags[0])
+                    buildManager.archiveResultsFromBuildResult(buildResult)
+                }
+            }
+        }
+        
+        stage('Perform WhiteSource scan') {
+            when { expression { return params.PERFORM_WHITESOURCE_SCAN } }
+            steps {
+                script {
+                    def projectName = "Virtual-Services-MCP"
+                    def scanComment = "${env.BRANCH_NAME}"
+                    whiteSourceScan(projectName, scanComment)
+                }
+            }
+        }
+        
+        stage('Perform PrismaCloud scan') {
+            when { expression { return params.PERFORM_PRISMA_SCAN } }
+            steps {
+                script {
+                    TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
                     runPrismaCloudScanOnK8s(
-                        imageTag: env.PRIMARY_IMAGE_TAG,
+                        imageTag: "${IMAGE_NAME}:${TAG}",
                         buildkitManager: buildkit
                     )
                 }
             }
         }
-
-        stage('Perform WhiteSource Scan') {
-            when { 
-                expression { 
-                    return params.PERFORM_WHITESOURCE_SCAN 
-                } 
-            }
-            steps {
-                script {
-                    echo "Running WhiteSource scan"
-                    def projectName = PROJECT_NAME
-                    whiteSourceScan(projectName)
-                }
-            }
-        }
-
-        stage('Push Docker Image') {
-            when {
-                expression { 
-                    // Only push to registry from master or when explicitly needed
-                    def branchName = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    return branchName == 'master' || branchName == 'main' || env.IS_PR == 'false'
-                }
-            }
-            steps {
-                script {
-                    echo "Pushing Docker image(s) to ${DOCKER_REGISTRY}"
-                    
-                    env.DOCKER_TAGS.split(',').each { tag ->
-                        def fullTag = "${DOCKER_REGISTRY}/${DOCKER_IMAGE_NAME}:${tag}"
-                        buildkit.push(fullTag)
-                        echo "Pushed: ${fullTag}"
-                    }
-                }
-            }
-        }
-
-        stage('Commit Version Update') {
-            when {
-                expression { 
-                    def branchName = env.BRANCH_NAME ?: sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    return branchName == 'master' || branchName == 'main'
-                }
-            }
-            steps {
-                script {
-                    echo "Pushing version update to repository"
-                    sh '''
-                        git push origin HEAD:master
-                    '''
-                }
-            }
-        }
-
-        stage('Update PR Status') {
-            when {
-                expression { return env.IS_PR == 'true' }
-            }
-            steps {
-                script {
-                    // Update PR with build information
-                    echo "Build completed for PR #${env.CHANGE_ID}"
-                    echo "Docker image: ${env.PRIMARY_IMAGE_TAG}"
-                }
-            }
-        }
     }
-
+    
     post {
-        success {
+        always {
+            smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
             script {
-                def branchName = env.BRANCH_NAME ?: 'unknown'
-                def message = "✅ Build Successful\n"
-                message += "Branch: ${branchName}\n"
-                message += "Version: ${env.IMAGE_VERSION}\n"
-                if (branchName == 'master' || branchName == 'main' || env.IS_PR == 'false') {
-                    message += "Image: ${env.PRIMARY_IMAGE_TAG}\n"
+                buildkit.cleanup()
+                if (!env.skippedBuild) {
+                    PullRequestUtils.updateBranchPullRequestsStatuses(this)
                 }
-                echo message
             }
         }
         failure {
-            script {
-                def branchName = env.BRANCH_NAME ?: 'unknown'
-                def message = "❌ Build Failed\n"
-                message += "Branch: ${branchName}\n"
-                message += "Check console output for details"
-                echo message
-            }
-        }
-        always {
-            script {
-                // Cleanup
-                echo "Cleaning up workspace"
-                cleanWs()
-            }
+            notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
         }
     }
 }

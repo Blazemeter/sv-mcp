@@ -45,6 +45,10 @@ pipeline {
                 script {
                     // Capture branch name from the declarative checkout before clearing workspace
                     env.CURRENT_BRANCH = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'master'
+                    // Keep BRANCH_NAME set for compatibility with BuildkitManager and other tools
+                    if (!env.BRANCH_NAME) {
+                        env.BRANCH_NAME = env.CURRENT_BRANCH
+                    }
                     echo "Building branch: ${env.CURRENT_BRANCH}"
                     
                     PullRequestUtils.updateBranchPullRequestsStatuses(this, PullRequestStatus.PENDING)

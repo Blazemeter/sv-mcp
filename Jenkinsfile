@@ -43,9 +43,13 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
+                    // Capture branch name from the declarative checkout before clearing workspace
+                    env.CURRENT_BRANCH = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'master'
+                    echo "Building branch: ${env.CURRENT_BRANCH}"
+                    
                     PullRequestUtils.updateBranchPullRequestsStatuses(this, PullRequestStatus.PENDING)
                     env.MODIFIED_BUILD_NUMBER = env.BUILD_NUMBER
-                    currentBuild.displayName = "#${MODIFIED_BUILD_NUMBER} | [Node] ${env.NODE_NAME} | ${env.BRANCH_NAME}"
+                    currentBuild.displayName = "#${MODIFIED_BUILD_NUMBER} | [Node] ${env.NODE_NAME} | ${env.CURRENT_BRANCH}"
                 }
             }
         }
@@ -56,17 +60,12 @@ pipeline {
                     clearWorkspace()
                     sh 'git config --global --add safe.directory "*"'
                     
-                    // Ensure BRANCH_NAME is set
-                    if (!env.BRANCH_NAME) {
-                        env.BRANCH_NAME = sh(script: 'git rev-parse --abbrev-ref HEAD', returnStdout: true).trim()
-                    }
-                    
-                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', "${env.BRANCH_NAME}")
+                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.CURRENT_BRANCH)
                     dir("Virtual-Services-MCP-Server") {
                         sh 'git config --global --add safe.directory "*"'
                         commitDate = sh script: 'git log -1 --format="%ad %H"', returnStdout: true
                         sh """
-                            echo -n '$JOB_NAME $BUILD_NUMBER $env.BRANCH_NAME $checkoutVars.GIT_COMMIT $commitDate' > Version.html
+                            echo -n '$JOB_NAME $BUILD_NUMBER ${env.CURRENT_BRANCH} ${checkoutVars.GIT_COMMIT} $commitDate' > Version.html
                         """
                     }
                 }
@@ -131,7 +130,7 @@ pipeline {
                             imageName: env.DOCKER_REPO,
                             buildArgs: [
                                 "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                                "BRANCH_NAME=${env.BRANCH_NAME}",
+                                "BRANCH_NAME=${env.CURRENT_BRANCH}",
                                 "BUILD_TIME=${currentBuild.startTimeInMillis}",
                                 "COMMIT_HASH=${checkoutVars.GIT_COMMIT}"
                             ]
@@ -144,16 +143,16 @@ pipeline {
         stage('Push to Registry') {
             steps {
                 script {
-                    tags = getPrDockerDetailedTag(env.BRANCH_NAME, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
+                    tags = getPrDockerDetailedTag(env.CURRENT_BRANCH, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
                     
-                    if (env.BRANCH_NAME.contains('release')) {
+                    if (env.CURRENT_BRANCH.contains('release')) {
                         tags.addTag('latest-release')
                     }
-                    if (env.BRANCH_NAME == 'develop' || env.BRANCH_NAME == 'master') {
+                    if (env.CURRENT_BRANCH == 'develop' || env.CURRENT_BRANCH == 'master') {
                         tags.addTag('latest')
                     }
                     tags.addTag(BUILD_NUMBER.toString())
-                    tags.addTag("${env.BRANCH_NAME}-${env.BUILD_NUMBER}")
+                    tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     
                     lock(label: 'Gcloud-VS-MCP') {
                         pushImageToAllRegistries(env.DOCKER_REPO, env.DOCKER_REPO, tags, buildkit)
@@ -171,7 +170,7 @@ pipeline {
             steps {
                 script {
                     def projectName = "Virtual-Services-MCP"
-                    def scanComment = "${env.BRANCH_NAME}"
+                    def scanComment = "${env.CURRENT_BRANCH}"
                     whiteSourceScan(projectName, scanComment)
                 }
             }
@@ -181,7 +180,7 @@ pipeline {
             when { expression { return params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    TAG = "${env.BRANCH_NAME}-${env.BUILD_NUMBER}"
+                    TAG = "${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}"
                     runPrismaCloudScanOnK8s(
                         imageTag: "${env.IMAGE_NAME}:${TAG}",
                         buildkitManager: buildkit

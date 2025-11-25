@@ -128,18 +128,21 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Generate tags before building
+                    // Generate base tags
                     tags = getPrDockerDetailedTag(env.CURRENT_BRANCH, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
                     
+                    // Add branch-specific tags
                     if (env.CURRENT_BRANCH.contains('release')) {
                         tags.addTag('latest-release')
                     }
+                    
+                    // Only add 'latest' tag for master and develop branches
                     if (env.CURRENT_BRANCH == 'develop' || env.CURRENT_BRANCH == 'master') {
                         tags.addTag('latest')
                     }
-                    tags.addTag(BUILD_NUMBER.toString())
+                    
+                    // Add branch-build tag
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
-                    tags.addTag('latest')
                     
                     // Convert tag names to full image references for BuildkitManager
                     def fullImageTags = tags.allTags.collect { tag -> 

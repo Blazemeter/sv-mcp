@@ -55,7 +55,7 @@ pipeline {
                 script {
                     clearWorkspace()
                     sh 'git config --global --add safe.directory "*"'
-                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', "*/${env.BRANCH_NAME}")
+                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.BRANCH_NAME)
                     dir("Virtual-Services-MCP-Server") {
                         sh 'git config --global --add safe.directory "*"'
                         commitDate = sh script: 'git log -1 --format="%ad %H"', returnStdout: true

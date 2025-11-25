@@ -128,27 +128,7 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    dir("Virtual-Services-MCP-Server") {
-                        buildkit.build(
-                            dockerFile: "Dockerfile",
-                            imageName: env.DOCKER_REPO,
-                            buildArgs: [
-                                "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                                "BRANCH_NAME=${env.CURRENT_BRANCH}",
-                                "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}"
-                            ]
-                        )
-                    }
-                }
-            }
-        }
-        
-        stage('Archive Build Results') {
-            steps {
-                script {
-                    // Images already pushed by BuildkitManager during build stage
-                    // Just archive the build results for tracking
+                    // Generate tags before building
                     tags = getPrDockerDetailedTag(env.CURRENT_BRANCH, checkoutVars.GIT_COMMIT, env.BUILD_NUMBER.toString())
                     
                     if (env.CURRENT_BRANCH.contains('release')) {
@@ -161,6 +141,21 @@ pipeline {
                     tags.addTag("${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}")
                     tags.addTag('latest')
                     
+                    dir("Virtual-Services-MCP-Server") {
+                        buildkit.build(
+                            dockerFile: "Dockerfile",
+                            imageName: env.DOCKER_REPO,
+                            tags: tags,
+                            buildArgs: [
+                                "BUILD_NUMBER=${env.BUILD_NUMBER}",
+                                "BRANCH_NAME=${env.CURRENT_BRANCH}",
+                                "BUILD_TIME=${currentBuild.startTimeInMillis}",
+                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}"
+                            ]
+                        )
+                    }
+                    
+                    // Archive build results
                     def buildManager = new BuildResultManager(this)
                     def buildResult = new PackageBuildResult(env.DOCKER_REPO, tags.allTags[0])
                     buildManager.archiveResultsFromBuildResult(buildResult)

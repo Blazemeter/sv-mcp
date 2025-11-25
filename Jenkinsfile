@@ -194,7 +194,7 @@ pipeline {
     
     post {
         always {
-            smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
+            // smartSlackNotification(alternateJobTitle: 'VS-MCP package build')
             script {
                 if (!env.skippedBuild) {
                     PullRequestUtils.updateBranchPullRequestsStatuses(this)
@@ -204,7 +204,7 @@ pipeline {
         failure {
             script {
                 sh 'git config --global --add safe.directory "*"'
-                notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+                // notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
             }
         }
     }

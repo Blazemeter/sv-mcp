@@ -88,13 +88,25 @@ pipeline {
     
     post {
         always {
-            smartSlackNotification(
-                alternateJobTitle: 'VS-MCP package build',
-                notifyOnSuccess: true
-            )
+            cleanWs()
+        }
+        success {
+            script {
+                // Send Slack notification on success
+                slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
+                slackSend(channel: "#bm-notifications-jenkins", message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
+            }
         }
         failure {
-            notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+            script {
+                // Send Slack notification if the pipeline fails
+                def errorMessage = currentBuild.description ?: "Unknown error"
+                slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
+                slackSend(channel: "#bm-alerts-blazemeter", message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
+                
+                // Send email notification
+                notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
+            }
         }
     }
 }

@@ -142,10 +142,10 @@ pipeline {
     
     post {
         always {
-            smartSlackNotification(
-                alternateJobTitle: 'VS-MCP package build',
-                notifyOnSuccess: true
-            )
+            // smartSlackNotification(
+            //     alternateJobTitle: 'VS-MCP package build',
+            //     notifyOnSuccess: true
+            // )
         }
         failure {
             notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')

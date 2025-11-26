@@ -65,6 +65,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Configure git to trust workspace
+                    sh 'git config --global --add safe.directory "*"'
+                    
                     BuildkitManager buildkit = new BuildkitManager(this)
                     
                     // Capture git commit for tagging

@@ -1,8 +1,6 @@
 @Library('jenkins_library') _
 
 import com.blazemeter.buildkit.BuildkitManager
-import com.blazemeter.pr.PullRequestUtils
-import com.blazemeter.pr.PullRequestStatus
 import com.blazemeter.pr.PackageBuildResult
 import com.blazemeter.pr.BuildResultManager
 
@@ -39,11 +37,7 @@ pipeline {
         stage('Setup') {
             steps {
                 script {
-                    clearWorkspaceAsRoot()
-                    
-                    PullRequestUtils.updateBranchPullRequestsStatuses(this, PullRequestStatus.PENDING)
                     currentBuild.displayName = "#${env.BUILD_NUMBER} | ${env.CURRENT_BRANCH}"
-                    
                     echo "Building branch: ${env.CURRENT_BRANCH}"
                 }
             }
@@ -152,17 +146,9 @@ pipeline {
                 alternateJobTitle: 'VS-MCP package build',
                 notifyOnSuccess: true
             )
-            script {
-                if (!env.skippedBuild) {
-                    PullRequestUtils.updateBranchPullRequestsStatuses(this)
-                }
-            }
         }
         failure {
-            script {
-                sh 'git config --global --add safe.directory "*"'
-                notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
-            }
+            notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
         }
     }
 }

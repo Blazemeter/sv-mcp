@@ -1,10 +1,8 @@
+clearWorkspaceAsRoot()
+
 @Library('jenkins_library') _
 
 import com.blazemeter.buildkit.BuildkitManager
-import com.blazemeter.pr.PackageBuildResult
-import com.blazemeter.pr.BuildResultManager
-
-properties([pipelineTriggers([githubPush()])])
 
 pipeline {
     agent {
@@ -27,95 +25,40 @@ pipeline {
         disableConcurrentBuilds()
     }
     
-    environment {
-        DOCKER_REPO = 'vs-mcp'
-        IMAGE_NAME = 'us.gcr.io/verdant-bulwark-278/vs-mcp'
-        CURRENT_BRANCH = "${env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'master'}"
-    }
-    
     stages {
         stage('Setup') {
             steps {
                 script {
-                    currentBuild.displayName = "#${env.BUILD_NUMBER} | ${env.CURRENT_BRANCH}"
-                    echo "Building branch: ${env.CURRENT_BRANCH}"
+                    currentBuild.displayName = "#${env.BUILD_NUMBER}"
                 }
             }
         }
         
-        stage('Build & Test') {
+        stage('Build') {
             steps {
                 script {
-                    sh """
-                        pip install build pytest pytest-cov --break-system-packages
-                        python -m build --sdist
-                        pip install . --break-system-packages
-                        mkdir -p reports
-                        PYTHONPATH=. pytest --junitxml=reports/junit-report.xml || echo 'Tests not implemented yet'
-                    """
+                    sh "pip install build --break-system-packages"
+                    sh "python -m build --sdist"
+                    sh "pip install . --break-system-packages"
                 }
             }
-            post {
-                always {
-                    junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
-                }
+        }
+        
+        stage('Test') {
+            steps {
+                sh "pip install . --break-system-packages"
+                sh "PYTHONPATH=. pytest --junitxml=reports/junit-report.xml"
+                junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
             }
         }
         
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Configure git to trust workspace
-                    sh 'git config --global --add safe.directory "*"'
-                    
                     BuildkitManager buildkit = new BuildkitManager(this)
+                    buildkit.build(imageName: "vs-mcp")
                     
-                    // Capture git commit for tagging
-                    def gitCommit = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
-                    def shortSha = gitCommit.take(5)
-                    def sanitisedBranch = sanitiseBranchName(env.CURRENT_BRANCH)
-                    
-                    // Build tags
-                    def tagsList = [
-                        env.BUILD_NUMBER,
-                        "${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}"
-                    ]
-                    
-                    // Add 'latest' only for master/develop
-                    if (env.CURRENT_BRANCH in ['develop', 'master']) {
-                        tagsList.add('latest')
-                    }
-                    
-                    // Add 'latest-release' for release branches
-                    if (env.CURRENT_BRANCH.contains('release')) {
-                        tagsList.add('latest-release')
-                    }
-                    
-                    echo "Tags: ${tagsList}"
-                    
-                    // Convert to full image references
-                    def fullImageTags = tagsList.collect { "${env.IMAGE_NAME}:${it}" }
-                    
-                    // Build with BuildkitManager
-                    buildkit.build(
-                        imageName: env.DOCKER_REPO,
-                        tags: fullImageTags,
-                        buildArgs: [
-                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                            "BRANCH_NAME=${env.CURRENT_BRANCH}",
-                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                            "COMMIT_HASH=${gitCommit}",
-                            "CACHEBUST=${currentBuild.startTimeInMillis}"
-                        ]
-                    )
-                    
-                    // Archive build results
-                    def buildManager = new BuildResultManager(this)
-                    def buildResult = new PackageBuildResult(env.DOCKER_REPO, tagsList[0])
-                    buildManager.archiveResultsFromBuildResult(buildResult)
-                    
-                    // Store for scans
-                    env.IMAGE_TAG = "${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}"
+                    // Store buildkit for scans
                     this.buildkit = buildkit
                 }
             }
@@ -125,7 +68,7 @@ pipeline {
             when { expression { params.PERFORM_WHITESOURCE_SCAN } }
             steps {
                 script {
-                    whiteSourceScan("Virtual-Services-MCP", env.CURRENT_BRANCH)
+                    whiteSourceScan("Virtual-Services-MCP", env.BRANCH_NAME)
                 }
             }
         }
@@ -135,7 +78,7 @@ pipeline {
             steps {
                 script {
                     runPrismaCloudScanOnK8s(
-                        imageTag: "${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        imageTag: "us.gcr.io/verdant-bulwark-278/vs-mcp:${env.BUILD_NUMBER}",
                         buildkitManager: this.buildkit
                     )
                 }

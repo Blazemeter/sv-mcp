@@ -3,13 +3,6 @@
 # ----------------------------
 FROM python:3.12-slim AS builder
 
-# Build arguments for metadata and cache busting
-ARG BUILD_NUMBER
-ARG BRANCH_NAME
-ARG BUILD_TIME
-ARG COMMIT_HASH
-ARG CACHEBUST
-
 WORKDIR /app
 
 # Install system dependencies needed for PyInstaller

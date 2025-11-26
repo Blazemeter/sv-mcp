@@ -78,7 +78,7 @@ pipeline {
             steps {
                 script {
                     runPrismaCloudScanOnK8s(
-                        imageTag: "us.gcr.io/verdant-bulwark-278/vs-mcp:${env.BUILD_NUMBER}",
+                        imageTag: "us.gcr.io/verdant-bulwark-278/vs-mcp:${env.BRANCH_NAME}-${env.BUILD_NUMBER}",
                         buildkitManager: this.buildkit
                     )
                 }

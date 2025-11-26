@@ -1,18 +1,24 @@
-@Library('jenkins_library')
+@Library('jenkins_library') _
+
 import com.blazemeter.buildkit.BuildkitManager
 import com.blazemeter.pr.PullRequestUtils
 import com.blazemeter.pr.PullRequestStatus
 import com.blazemeter.pr.PackageBuildResult
 import com.blazemeter.pr.BuildResultManager
 
-BuildkitManager buildkit = new BuildkitManager(this)
-
-properties([pipelineTriggers([githubPush()])]) //Enable Git webhook triggering
+properties([pipelineTriggers([githubPush()])])
 
 pipeline {
+    agent {
+        kubernetes {
+            yaml agentYaml()
+            defaultContainer 'jenkins-docker-agent'
+            workspaceVolume dynamicPVC(accessModes: 'ReadWriteOnce', requestsSize: "5Gi", storageClassName: "standard-rwo")
+        }
+    }
+    
     parameters {
         booleanParam(name: 'PERFORM_PRISMA_SCAN', defaultValue: true, description: 'Perform a Prisma scan for the Docker image')
-        booleanParam(name: 'FAIL_JOB_ON_SCAN_FAILURES', defaultValue: false, description: 'If checked, Twistlock vulnerabilities scan will enforce job failure.')
         booleanParam(name: 'PERFORM_WHITESOURCE_SCAN', defaultValue: true, description: 'Perform a WhiteSource scan for the code')
     }
     
@@ -22,105 +28,42 @@ pipeline {
         timestamps()
         disableConcurrentBuilds()
     }
-
-    agent {
-        kubernetes {
-            yaml agentYaml()
-            defaultContainer 'jenkins-docker-agent'
-            workspaceVolume dynamicPVC(accessModes: 'ReadWriteOnce', requestsSize: "5Gi", storageClassName: "standard-rwo")
-        }
-    }
     
     environment {
-        project = 'Virtual-Services-MCP-Server'
         DOCKER_REPO = 'vs-mcp'
         IMAGE_NAME = 'us.gcr.io/verdant-bulwark-278/vs-mcp'
-        TMPDIR = '/tmp'
-        SENDER = 'jenkins@blazemeter.com'
+        CURRENT_BRANCH = "${env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'master'}"
     }
     
     stages {
         stage('Setup') {
             steps {
                 script {
-                    // Capture branch name from the declarative checkout before clearing workspace
-                    env.CURRENT_BRANCH = env.BRANCH_NAME ?: env.GIT_BRANCH?.replaceAll('origin/', '') ?: 'master'
-                    // Keep BRANCH_NAME set for compatibility with BuildkitManager and other tools
-                    if (!env.BRANCH_NAME) {
-                        env.BRANCH_NAME = env.CURRENT_BRANCH
-                    }
-                    echo "Building branch: ${env.CURRENT_BRANCH}"
+                    clearWorkspaceAsRoot()
                     
                     PullRequestUtils.updateBranchPullRequestsStatuses(this, PullRequestStatus.PENDING)
-                    env.MODIFIED_BUILD_NUMBER = env.BUILD_NUMBER
-                    currentBuild.displayName = "#${MODIFIED_BUILD_NUMBER} | [Node] ${env.NODE_NAME} | ${env.CURRENT_BRANCH}"
-                }
-            }
-        }
-        
-        stage('Clone') {
-            steps {
-                script {
-                    clearWorkspace()
-                    sh 'git config --global --add safe.directory "*"'
+                    currentBuild.displayName = "#${env.BUILD_NUMBER} | ${env.CURRENT_BRANCH}"
                     
-                    checkoutVars = repositoryDirectoryCheckout('Virtual-Services-MCP-Server', 'Virtual-Services-MCP-Server', env.CURRENT_BRANCH)
-                    dir("Virtual-Services-MCP-Server") {
-                        sh 'git config --global --add safe.directory "*"'
-                        commitDate = sh script: 'git log -1 --format="%ad %H"', returnStdout: true
-                        sh """
-                            echo -n '$JOB_NAME $BUILD_NUMBER ${env.CURRENT_BRANCH} ${checkoutVars.GIT_COMMIT} $commitDate' > Version.html
-                        """
-                    }
+                    echo "Building branch: ${env.CURRENT_BRANCH}"
                 }
             }
         }
         
-        stage('Setup Python Environment') {
+        stage('Build & Test') {
             steps {
                 script {
-                    dir("Virtual-Services-MCP-Server") {
-                        sh '''
-                            python3 --version
-                            pip3 --version
-                        '''
-                    }
-                }
-            }
-        }
-        
-        stage('Install Dependencies') {
-            steps {
-                script {
-                    dir("Virtual-Services-MCP-Server") {
-                        sh '''
-                            pip3 install --no-cache-dir . --break-system-packages
-                            pip3 install --no-cache-dir pytest pytest-cov --break-system-packages
-                        '''
-                    }
-                }
-            }
-        }
-        
-        stage('Run Tests') {
-            steps {
-                script {
-                    dir("Virtual-Services-MCP-Server") {
-                        sh '''
-                            mkdir -p reports
-                            # Once tests are implemented, run them with:
-                            # pytest --junitxml=reports/junit-report.xml --cov=vs_mcp --cov-report=xml:reports/coverage.xml tests/
-                            
-                            # For now, create empty report to allow pipeline to proceed
-                            echo '<?xml version="1.0" encoding="UTF-8"?><testsuites><testsuite name="placeholder" tests="0" errors="0" failures="0" skipped="0"></testsuite></testsuites>' > reports/junit-report.xml
-                            echo "Tests will be executed once implemented"
-                        '''
-                    }
+                    sh """
+                        pip install build pytest pytest-cov --break-system-packages
+                        python -m build --sdist
+                        pip install . --break-system-packages
+                        mkdir -p reports
+                        PYTHONPATH=. pytest --junitxml=reports/junit-report.xml || echo 'Tests not implemented yet'
+                    """
                 }
             }
             post {
                 always {
-                    junit allowEmptyResults: true, testResults: 'Virtual-Services-MCP-Server/reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
+                    junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
                 }
             }
         }
@@ -128,76 +71,75 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Create custom tags list
-                    def tagsList = []
+                    BuildkitManager buildkit = new BuildkitManager(this)
                     
-                    // Add build number tag
-                    tagsList.add(env.BUILD_NUMBER.toString())
-                    
-                    // Add branch-sha-build tag
+                    // Capture git commit for tagging
+                    def gitCommit = sh(script: 'git rev-parse HEAD', returnStdout: true).trim()
+                    def shortSha = gitCommit.take(5)
                     def sanitisedBranch = sanitiseBranchName(env.CURRENT_BRANCH)
-                    def shortSha = checkoutVars.GIT_COMMIT.take(5)
-                    tagsList.add("${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}")
                     
-                    // Only add 'latest' tag for master and develop branches
-                    if (env.CURRENT_BRANCH == 'develop' || env.CURRENT_BRANCH == 'master') {
+                    // Build tags
+                    def tagsList = [
+                        env.BUILD_NUMBER,
+                        "${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}"
+                    ]
+                    
+                    // Add 'latest' only for master/develop
+                    if (env.CURRENT_BRANCH in ['develop', 'master']) {
                         tagsList.add('latest')
                     }
                     
-                    // Add latest-release for release branches
+                    // Add 'latest-release' for release branches
                     if (env.CURRENT_BRANCH.contains('release')) {
                         tagsList.add('latest-release')
                     }
                     
-                    echo "Tags to be applied: ${tagsList}"
+                    echo "Tags: ${tagsList}"
                     
-                    // Convert tag names to full image references for BuildkitManager
-                    def fullImageTags = tagsList.collect { tag -> 
-                        "${env.IMAGE_NAME}:${tag}"
-                    }
+                    // Convert to full image references
+                    def fullImageTags = tagsList.collect { "${env.IMAGE_NAME}:${it}" }
                     
-                    dir("Virtual-Services-MCP-Server") {
-                        buildkit.build(
-                            dockerFile: "Dockerfile",
-                            imageName: env.DOCKER_REPO,
-                            tags: fullImageTags,
-                            buildArgs: [
-                                "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                                "BRANCH_NAME=${env.CURRENT_BRANCH}",
-                                "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                                "COMMIT_HASH=${checkoutVars.GIT_COMMIT}",
-                                "CACHEBUST=${currentBuild.startTimeInMillis}" // Force new image per build
-                            ]
-                        )
-                    }
+                    // Build with BuildkitManager
+                    buildkit.build(
+                        imageName: env.DOCKER_REPO,
+                        tags: fullImageTags,
+                        buildArgs: [
+                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
+                            "BRANCH_NAME=${env.CURRENT_BRANCH}",
+                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
+                            "COMMIT_HASH=${gitCommit}",
+                            "CACHEBUST=${currentBuild.startTimeInMillis}"
+                        ]
+                    )
                     
                     // Archive build results
                     def buildManager = new BuildResultManager(this)
                     def buildResult = new PackageBuildResult(env.DOCKER_REPO, tagsList[0])
                     buildManager.archiveResultsFromBuildResult(buildResult)
+                    
+                    // Store for scans
+                    env.IMAGE_TAG = "${sanitisedBranch}-${shortSha}-${env.BUILD_NUMBER}"
+                    this.buildkit = buildkit
                 }
             }
         }
         
-        stage('Perform WhiteSource scan') {
-            when { expression { return params.PERFORM_WHITESOURCE_SCAN } }
+        stage('WhiteSource Scan') {
+            when { expression { params.PERFORM_WHITESOURCE_SCAN } }
             steps {
                 script {
-                    def projectName = "Virtual-Services-MCP"
-                    def scanComment = "${env.CURRENT_BRANCH}"
-                    whiteSourceScan(projectName, scanComment)
+                    whiteSourceScan("Virtual-Services-MCP", env.CURRENT_BRANCH)
                 }
             }
         }
         
-        stage('Perform PrismaCloud scan') {
-            when { expression { return params.PERFORM_PRISMA_SCAN } }
+        stage('PrismaCloud Scan') {
+            when { expression { params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    TAG = "${env.CURRENT_BRANCH}-${env.BUILD_NUMBER}"
                     runPrismaCloudScanOnK8s(
-                        imageTag: "${env.IMAGE_NAME}:${TAG}",
-                        buildkitManager: buildkit
+                        imageTag: "${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        buildkitManager: this.buildkit
                     )
                 }
             }

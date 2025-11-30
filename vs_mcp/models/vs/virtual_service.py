@@ -18,6 +18,7 @@ class Endpoint(BaseModel):
 class VirtualService(BaseModel):
     id: int = Field(..., description="The unique identifier of the virtual service")
     name: str = Field(..., description="The name of the virtual service")
+    status: str = Field("", description="The status of the virtual service")
     serviceId: int = Field(..., description="The unique identifier of the service where the virtual service belongs")
     type: str = Field(
         ...,

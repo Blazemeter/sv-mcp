@@ -7,7 +7,6 @@ from vs_mcp.tools.vs.messaging_transaction_manager import register as messaging_
 from vs_mcp.tools.vs.virtual_service_manager import register as register_virtual_service_manager
 from vs_mcp.tools.vs.virtual_service_template_manager import register as register_virtual_service_template_manager
 from vs_mcp.tools.vs.tracking_manager import register as register_tracking_manager
-from vs_mcp.tools.vs.asset_tracking_manager import register as register_asset_tracking_manager
 from vs_mcp.tools.vs.location_manager import register as register_location_manager
 from vs_mcp.tools.vs.sandbox_manager import register as register_sandbox_manager
 from vs_mcp.tools.vs.action_manager import register as register_action_manager
@@ -35,7 +34,6 @@ def register_tools(mcp, token: Optional[BzmToken]):
     register_virtual_service_manager(mcp, token)
     register_virtual_service_template_manager(mcp, token)
     register_tracking_manager(mcp, token)
-    register_asset_tracking_manager(mcp, token)
     register_location_manager(mcp, token)
     register_sandbox_manager(mcp, token)
     register_action_manager(mcp, token)

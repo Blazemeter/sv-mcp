@@ -82,8 +82,6 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | **Configuration**            | Configuration Management            | Create, manage configurations                               |
 | **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                            |
 | **Tracking**                 | Tracking Management                 | Fetch tracking status for virtual service actions           |
-| **Asset Tracking**           | Tracking Management                 | Fetch tracking status for asset upload action               |
-
 ---
 
 ### **User Management**
@@ -217,18 +215,10 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 ### **Tracking Management**
 **What it does:** Reads virtual service action tracking details.
 
-| Action          | What you get                                  |
-|-----------------|-----------------------------------------------|
-| Read a tracking | Reads virtual service action tracking details |
-
----
-
-### **Asset Tracking Management**
-**What it does:** Reads file upload tracking details.
-
-| Action          | What you get                       |
-|-----------------|------------------------------------|
-| Read a tracking | Reads file upload tracking details |
+| Action                        | What you get                                  |
+|-------------------------------|-----------------------------------------------|
+| Read a tracking               | Reads virtual service action tracking details |
+| Read an asset uplaod tracking | Reads file upload tracking details            |
 
 ---
 ### **Virtual Service Management**
@@ -348,8 +338,6 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "run",
         "--rm",
         "-i",
-        "--mount",
-        "type=bind,source=/path/to/your/test/files,target=/home/bzm-mcp/working_directory/",
         "-e", 
         "VS_URL=https://ci-mock.blazemeter.net/api/v1", //OPTIONAL: only if you want to use non-prod environmen
         "-e", 
@@ -359,7 +347,9 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
         "-e",
         "API_KEY_SECRET=your_api_key_secret",
         "-e",
-        "SOURCE_WORKING_DIRECTORY=/path/to/your/test/files",
+        "SOURCE_WORKING_DIRECTORY=/tmp",
+        "-v",
+        "/host/path/to/your/test/files:/tmp",
         "ghcr.io/blazemeter/bzm-mcp:latest"
       ]
     }

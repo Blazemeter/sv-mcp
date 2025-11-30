@@ -14,6 +14,7 @@ def format_virtual_services(virtual_services: List[Any], params: Optional[dict] 
             VirtualService(
                 id=vs.get("id"),
                 name=vs.get("name"),
+                status=vs.get("status"),
                 serviceId=vs.get("serviceId"),
                 type=vs.get("type"),
                 harborId=vs.get("harborId"),

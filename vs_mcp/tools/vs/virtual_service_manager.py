@@ -353,6 +353,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict):
                 id (int): Mandatory. The id of the Virtual Service.
                 asset_id (int): Mandatory. The id of the certificate asset to assign.
+                alias (str): Mandatory. The certificate alias to use.
                 workspace_id (int): Mandatory. The id of the workspace.       
         VirtualService Schema (including full MockServiceTransaction):
         """ + str(VirtualService.model_json_schema()) + """
@@ -448,7 +449,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["workspace_id"],
                         "SERVER_KEYSTORE",
                         args["asset_id"],
-                        None,
+                        args["alias"],
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")

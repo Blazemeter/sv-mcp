@@ -5,7 +5,8 @@ from typing import Optional, Dict, Any, Annotated
 import httpx
 from mcp.server.fastmcp import Context
 
-from vs_mcp.config.blazemeter import VS_TRANSACTIONS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX, VS_VALIDATIONS_ENDPOINT, \
+from vs_mcp.config.blazemeter import VS_TRANSACTIONS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX, \
+    VS_VALIDATIONS_ENDPOINT, \
     VS_CONVERT_ENDPOINT
 from vs_mcp.config.token import BzmToken
 from vs_mcp.formatters.transaction import format_http_transactions
@@ -51,6 +52,8 @@ class HttpTransactionManager:
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
         request = dsl_dict.get("requestDsl")
         if request:
+            if request.get("url") is not None:
+                request["url"]["key"] = "url"
             body_list = request.get("body", [])
             for body_matcher in body_list:
                 value = body_matcher.get("matchingValue")
@@ -89,7 +92,22 @@ class HttpTransactionManager:
                      dsl: GenericDsl, delay: int) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
-
+        request = dsl_dict.get("requestDsl")
+        if request:
+            if request.get("url") is not None:
+                request["url"]["key"] = "url"
+            body_list = request.get("body", [])
+            for body_matcher in body_list:
+                value = body_matcher.get("matchingValue")
+                if value is not None:
+                    body_matcher["matchingValue"] = HttpTransactionManager.to_base64(value)
+        if delay:
+            response = dsl_dict.get("responseDsl")
+            if response:
+                response["responseDelay"] = {
+                    "type": "FIXED",
+                    "duration": delay
+                }
         transaction_body = {
             "id": id,
             "type": type,

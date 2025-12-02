@@ -1,0 +1,276 @@
+# TEST DEFINITION
+variables:
+  default_service_id: 195
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+  workspace_id: 1622
+sessions:
+  - name: Create and get Transaction
+    allowed_tools:
+      - virtual_services_service
+      - virtual_services_http_transaction
+    tests:
+      - name: "Create a transaction"
+        prompt: |
+          Create a new transaction with name: {{transaction-name}} in the Service {{default_service_id}} of workspace {{workspace_id}}.
+          If transaction create call returns error "Transaction `name` already exists in Service ",  update existing.
+          If you want to use handlebars template 
+          The transaction should:
+          - Method: GET
+          - URL matcher: matches /users/ + any numeric id
+          - Use the request id path parameter in the JSON response
+          - Return a JSON object with the following fields:        
+              id: value from the path parameter          
+              name: any fake name          
+              city: any fake city
+          Important: Always use correct tool names.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+  - name: Create and update Transaction
+    allowed_tools:
+      - virtual_services_http_transaction
+    tests:
+      - name: "Create transaction for update"
+        prompt: |
+          Create a new transaction with name: {{transaction-name-for-update}} in the Service {{default_service_id}} of the workspace {{workspace_id}}.
+          The transaction should:
+          - Expose the endpoint: GET matches /test-transaction
+          - Return response "response" with status 201
+          Important: Always use correct tool names.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+      - name: "Update transaction"
+        prompt: |
+          Update created transaction {{txn_id}} set name updated-{{transaction-name-for-update}}
+          Important: Always use correct tool names.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "update"
+              args.name: "updated-{{transaction-name-for-update}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{txn_id}}"
+      - name: "Read updated transaction"
+        prompt: |
+          Read transaction {{txn_id}} information in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].name"
+            value: "updated-{{transaction-name-for-update}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            value: "{{txn_id}}"
+      - name: "List transactions"
+        prompt: |
+          List transactions in the Service {{default_service_id}} with offset 10, limit 5.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "list"
+              args.offset: 10
+              args.limit: 5
+  - name: Templates session
+    allowed_tools:
+      - virtual_services_http_transaction
+    tests:
+      - name: "Create and validate template"
+        prompt: |
+          Create and validate transaction response template that will take a second part of path /users/2 and use it in JSON object as ID.
+          When transaction template is valid, convert it to blazemeter format.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "validate_template"
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "convert_template"
+  - name: Create Transaction With Keystore
+    allowed_tools:
+      - virtual_services_http_transaction
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Create transaction for keystore assignment"
+        prompt: |
+          Create a new transaction with name: keystore-{{transaction-name-for-update}} in the Service {{default_service_id}} of the workspace {{workspace_id}}.
+          The transaction should:
+          - Expose the endpoint: GET matches /test-transaction
+          - Return response "response" with status 201
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Update transaction, assign keystore"
+        prompt: |
+          Assign keystore asset {{asset_id}} with alias "localhost" to transaction {{txn_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "assign_keystore"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.alias: "localhost"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "CLIENT_KEYSTORE_TRUSTSTORE"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].assets[0].alias"
+            value: "localhost"
+  - name: Create Transaction With Certificate
+    allowed_tools:
+      - virtual_services_http_transaction
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Create transaction for certificate assignment"
+        prompt: |
+          Create a new transaction with name: cert-{{transaction-name-for-update}} in the Service {{default_service_id}} of the workspace {{workspace_id}}.
+          The transaction should:
+          - Expose the endpoint: GET matches /test-transaction
+          - Return response "response" with status 201
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+      - name: "Upload certificate asset"
+        prompt: |
+          Upload /tmp/localhost.pem file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/localhost.pem"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Update transaction, assign certificate"
+        prompt: |
+          Assign certificate asset {{asset_id}} to transaction {{txn_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "assign_certificate"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "CLIENT_TRUSTSTORE_CERT"

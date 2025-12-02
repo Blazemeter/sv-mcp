@@ -1,0 +1,243 @@
+# TEST DEFINITION
+variables:
+  default_service_id: 195
+  workspace_id: 1622
+  service-name: service-{{now format='unix'}}
+  transaction-name: action-transaction-{{now format='unix'}}
+sessions:
+  - name: Action operations
+    allowed_tools:
+      - virtual_services_http_transaction
+      - virtual_services_action
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Create transaction for action assignment"
+        prompt: |
+          Create a new transaction with name: {{transaction-name}} in the Service {{default_service_id}} of the workspace {{workspace_id}}.
+          The transaction should:
+          - Expose the endpoint: GET matches /test-transaction
+          - Return response "response" with status 201
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+      - name: "Create http call action"
+        prompt: |
+          Create an http call action with name "action_call" for the transaction {{txn_id}} in workspace {{workspace_id}}. 
+          This http call should call POST https://www.example.com, with header Header1:Value1 and body "post request"
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_action"
+            path: "$.result[0].id"
+            variable_name: "http_call_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_action"
+            params:
+              action: "create_http_call"
+              args.workspace_id: "{{workspace_id}}"
+              args.action_name: "action_call"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].name"
+            value: "action_call"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].actionType"
+            value: "HTTP_CALL"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.headers[0].name"
+            value: "Header1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.headers[0].value"
+            value: "Value1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.urlValue"
+            value: "https://www.example.com"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.urlMethod"
+            value: "POST"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.bodyContent"
+            value: "post request"
+      - name: "Create webhook action"
+        prompt: |
+          Create an web hook action with name "web_hook" for the transaction {{txn_id}} in workspace {{workspace_id}}. 
+          This http call should call POST https://www.example.com, with header Header1:Value1 and body "post request"
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_action"
+            path: "$.result[0].id"
+            variable_name: "web_hook_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_action"
+            params:
+              action: "create_web_hook"
+              args.workspace_id: "{{workspace_id}}"
+              args.action_name: "web_hook"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].name"
+            value: "web_hook"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].actionType"
+            value: "WEBHOOK"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.headers[0].name"
+            value: "Header1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.headers[0].value"
+            value: "Value1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.urlValue"
+            value: "https://www.example.com"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.urlMethod"
+            value: "POST"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].definition.bodyContent"
+            value: "post request"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Assign keystore to the http call action"
+        prompt: |
+          Attach keystore asset {{asset_id}} with alias localhost to the action {{http_call_id}} in transaction {{txn_id}} in workspace id {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_action"
+            params:
+              action: "assign_keystore"
+              args.workspace_id: "{{workspace_id}}"
+              args.transaction_id: "{{txn_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.id: "{{http_call_id}}"
+              args.alias: "localhost"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "CLIENT_KEYSTORE_TRUSTSTORE"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].assets[0].alias"
+            value: "localhost"
+      - name: "Upload certificate asset"
+        prompt: |
+          Upload /tmp/localhost.pem file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/localhost.pem"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Update action, assign certificate"
+        prompt: |
+          Attach certificate asset {{asset_id}} to the action {{web_hook_id}} in transaction {{txn_id}} in workspace id {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_action"
+            params:
+              action: "assign_certificate"
+              args.workspace_id: "{{workspace_id}}"
+              args.transaction_id: "{{txn_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.id: "{{web_hook_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_action"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "CLIENT_TRUSTSTORE_CERT"

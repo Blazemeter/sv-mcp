@@ -1,0 +1,33 @@
+# TEST DEFINITION
+variables:
+  configuration-name: configuration-{{now format='unix'}}
+  vs-name: vs-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+  workspace_id: 1622
+sessions:
+  - name: Locations operations
+    allowed_tools:
+      - virtual_services_location
+    tests:
+      - name: "List locations"
+        prompt: |
+          List locations in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_location"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_location"
+            path: "$.result[0].harborId"
+            value: "664e1a51e58e6125010f3178"
+          - type: tool_result_matches_json
+            tool: "virtual_services_location"
+            path: "$.result[0].shipId"
+            value: "664e1a6099590d3961050698"
+          - type: tool_result_matches_json
+            tool: "virtual_services_location"
+            path: "$.result[0].shipName"
+            value: "US East (Virginia)"                 

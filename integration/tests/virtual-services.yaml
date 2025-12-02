@@ -1,0 +1,522 @@
+# TEST DEFINITION
+variables:
+  default_service_id: 195
+  vs-name: vs-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+  configuration-name: config-{{now format='unix'}}
+  workspace_id: 1622
+sessions:
+  - name: Create HTTP Virtual Service
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_virtual_service
+    tests:
+      - name: "Create a virtual service"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name {{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].name"
+            value: "{{vs-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].harborId"
+            value: "664e1a51e58e6125010f3178"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].shipId"
+            value: "664e1a6099590d3961050698"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].type"
+            value: "TRANSACTIONAL"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].replicas"
+            value: "1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].endpointPreference"
+            value: "HTTPS"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].noMatchingRequestPreference"
+            value: "return404"
+      - name: "Read a virtual service"
+        prompt: |
+          Get virtual service {{vs_id}} information in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            value: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].name"
+            value: "{{vs-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].harborId"
+            value: "664e1a51e58e6125010f3178"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].shipId"
+            value: "664e1a6099590d3961050698"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].type"
+            value: "TRANSACTIONAL"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].replicas"
+            value: "1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].endpointPreference"
+            value: "HTTPS"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].noMatchingRequestPreference"
+            value: "return404"
+      - name: "List virtual services"
+        prompt: |
+          List virtual services information in workspace {{workspace_id}} with limit 5 and offset 10.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+              args.limit: "5"
+              args.offset: "10"
+  - name: Create HTTP Virtual Service and Assign transactions
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_virtual_service
+      - virtual_services_http_transaction
+    tests:
+      - name: "Create a virtual service"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name assign-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in the workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].serviceId"
+            variable_name: "service_id"
+      - name: "Create a transaction"
+        prompt: |
+          Create a simple transaction in the service {{default_service_id}}, workspace {{workspace_id}}. Transaction name {{transaction-name}}, url equals /user.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+      - name: "Assign a transaction"
+        prompt: |
+          Assign transaction {{txn_id}} to virtual service {{vs_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "assign_transactions"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+              args.transaction_ids: "[{{txn_id}}]"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].mockServiceTransactions[0].txnId"
+            value: "{{txn_id}}"
+      - name: "Unassign a transaction"
+        prompt: |
+          Unassign transaction {{txn_id}} to virtual service {{vs_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "unassign_transactions"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+              args.transaction_ids: "[{{txn_id}}]"
+  - name: Create HTTP Virtual Service and Assign proxy
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_virtual_service
+    tests:
+      - name: "Create a virtual service"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name proxy-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+      - name: "Set proxy settings"
+        prompt: |
+          Set proxy for the virtual service {{vs_id}} in workspace {{workspace_id}}. Proxy Url: http://10.0.0.1:8080,
+          Non proxy hosts: 127.0.0.1, proxy username: user, password: pass
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "set_proxy"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+              args.proxyUrl: "http://10.0.0.1:8080"
+              args.username: "user"
+              args.password: "pass"
+              args.nonProxyHosts: "127.0.0.1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].proxy.proxyUrl"
+            value: "http://10.0.0.1:8080"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].proxy.username"
+            value: "user"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].proxy.password"
+            value: "cGFzcw=="
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].proxy.nonProxyHosts"
+            value: "127.0.0.1"
+      - name: "Unset proxy settings"
+        prompt: |
+          Remove proxy settings for the virtual service {{vs_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "unset_proxy"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].proxy"
+            value: "null"
+  - name: Create HTTP Virtual Service and deploy / configure /stop
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_virtual_service
+      - virtual_services_tracking
+    tests:
+      - name: "Create a virtual service"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name new-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "STOPPED"
+      - name: "Deploy a virtual service"
+        prompt: |
+          Deploy the virtual service {{vs_id}} in workspace {{workspace_id}}. Return tracking info.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "deploy"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+      - name: "Get deployed virtual service after deploy"
+        start_delay: 200s
+        prompt: |
+          Read the virtual service {{vs_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "RUNNING"
+      - name: "Stop a virtual service"
+        prompt: |
+          Stop the virtual service {{vs_id}} in workspace {{workspace_id}}. Return tracking info.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "stop"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+      - name: "Get deployed virtual service after stop"
+        start_delay: 10s
+        prompt: |
+          Read the virtual service {{vs_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "STOPPED"
+  - name: Create virtual service for keystore test
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_asset
+      - virtual_services_tracking
+      - virtual_services_virtual_service
+    tests:
+      - name: "Create virtual service for keystore test"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name keystore-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "STOPPED"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Update virtual service, assign server keystore"
+        prompt: |
+          Assign keystore asset {{asset_id}} with alias "localhost" to virtual service {{vs_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "assign_keystore"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "SERVER_KEYSTORE"
+  - name: Create virtual service for 2 way ssl test
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_asset
+      - virtual_services_tracking
+      - virtual_services_virtual_service
+    tests:
+      - name: "Create virtual service for 2way ssl test"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name 2ssl-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "STOPPED"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Update virtual service, assign server keystore + truststore"
+        prompt: |
+          Assign asset {{asset_id}} with alias "localhost" to virtual service {{vs_id}} in workspace {{workspace_id}} for usage in 2 way ssl setup (truststore and keystore)
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "assign_keystore_truststore"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "SERVER_KEYSTORE_TRUSTSTORE"
+  - name: Create virtual service for configuration test
+    allowed_tools:
+      - virtual_services_location
+      - virtual_services_configuration
+      - virtual_services_virtual_service
+    tests:
+      - name: "Create virtual service for configuration test"
+        prompt: |
+          Use location list to find US location.
+          Create HTTP Virtual Service with name configuration-{{vs-name}} with http endpoint preference, US location, Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].id"
+            variable_name: "vs_id"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].status"
+            value: "STOPPED"
+      - name: "Create a configuration"
+        prompt: |
+          Create a configuration with name {{configuration-name}} in workspace {{workspace_id}} with next variables: var1 with value val1, var2 - val2
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_configuration"
+            path: "$.result[0].id"
+            variable_name: "configuration_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_configuration"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var1"
+            value: "val1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var2"
+            value: "val2"
+      - name: "Update virtual service, assign configuration"
+        prompt: |
+          Assign configuration {{configuration_id}} to virtual service {{vs_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service"
+            params:
+              action: "assign_configuration"
+              args.configuration_id: "{{configuration_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{vs_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service"
+            path: "$.result[0].configurationId"
+            value: "{{configuration_id}}"

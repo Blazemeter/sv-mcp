@@ -1,0 +1,80 @@
+# TEST DEFINITION
+variables:
+  configuration-name: configuration-{{now format='unix'}}
+  vs-name: vs-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+  workspace_id: 1622
+sessions:
+  - name: Configuration operations
+    allowed_tools:
+      - virtual_services_configuration
+    tests:
+      - name: "Create a configuration"
+        prompt: |
+          Create a configuration with name {{configuration-name}} in workspace {{workspace_id}} with next variables: var1 with value val1, var2 - val2
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_configuration"
+            path: "$.result[0].id"
+            variable_name: "configuration_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_configuration"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var1"
+            value: "val1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var2"
+            value: "val2"
+      - name: "Update a configuration"
+        prompt: |
+          Update configuration with ID {{configuration_id}} in workspace {{workspace_id}} with new name next variables: var1 with value val11, var2 - val22, leave the name as is.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_configuration"
+            params:
+              action: "update"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var1"
+            value: "val11"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var2"
+            value: "val22"
+      - name: "Read a configuration"
+        prompt: |
+          Read configuration with ID {{configuration_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_configuration"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.configuration_id: "{{configuration_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var1"
+            value: "val11"
+          - type: tool_result_matches_json
+            tool: "virtual_services_configuration"
+            path: "$.result[0].configurationMap.var2"
+            value: "val22"
+      - name: "List configurations"
+        prompt: |
+          List configurations in workspace {{workspace_id}} with limit 5 and offset 10.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_configuration"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+              args.limit: "5"
+              args.offset: "10"

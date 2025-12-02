@@ -44,10 +44,8 @@ class VirtualServiceTemplateManager:
             workspace_id: int,
             vs_name: str,
             service_id: int,
-            replicas: int,
             noMatchingRequestPreference: str,
-            mock_service_transactions: List[MockServiceTransaction],
-            http_runner_enabled: bool
+            mock_service_transactions: List[MockServiceTransaction]
     ) -> BaseResult:
         transactions_list = (
             [txn.model_dump() for txn in mock_service_transactions]
@@ -60,10 +58,10 @@ class VirtualServiceTemplateManager:
         template_body = {
             "name": vs_name,
             "serviceId": service_id,
-            "replicas": replicas,
+            "replicas": 1,
             "mockServiceTransactions": transactions_list,
             "noMatchingRequestPreference": noMatchingRequestPreference,
-            "httpRunnerEnabled": http_runner_enabled,
+            "httpRunnerEnabled": True,
         }
 
         params = {"serviceId": service_id}
@@ -82,10 +80,8 @@ class VirtualServiceTemplateManager:
             template_id: int,
             vs_name: Optional[str],
             service_id: Optional[int],
-            replicas: Optional[int],
             noMatchingRequestPreference: Optional[str],
             mock_service_transactions: Optional[List[MockServiceTransaction]],
-            http_runner_enabled: Optional[bool],
     ) -> BaseResult:
         update_request = {"id": template_id, "workspaceId": workspace_id}
 
@@ -93,12 +89,8 @@ class VirtualServiceTemplateManager:
             update_request["name"] = vs_name
         if service_id is not None:
             update_request["serviceId"] = service_id
-        if replicas is not None:
-            update_request["replicas"] = replicas
         if noMatchingRequestPreference is not None:
             update_request["noMatchingRequestPreference"] = noMatchingRequestPreference
-        if http_runner_enabled is not None:
-            update_request["httpRunnerEnabled"] = http_runner_enabled
 
         if mock_service_transactions is not None:
             transactions_list = (
@@ -187,18 +179,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace.
                 name (str): Mandatory. The name of the virtual service template.
                 serviceId (int): Mandatory. The id of the service to create the virtual service template in.
-                replicas (int): Mandatory. Always set to 1.
                 noMatchingRequestPreference (str): Mandatory. If not specified use 'return404'.
-                httpRunnerEnabled: (bool): Mandatory. Must be 'TRUE' for the virtual service templates.
         - update: Update an existing new virtual service template.
             args(VirtualService): A virtual service template object with the following fields:
                 workspace_id (int): Mandatory. The id of the workspace.
                 template_id (int): Mandatory. The id of the virtual service template.
                 name (str): Optional. The name of the virtual service template.
                 serviceId (int): Optional. The id of the service to create the virtual service template in.
-                replicas (int): Optional. Always set to 1.
                 noMatchingRequestPreference (str): Optional. If not specified use 'return404'.
-                httpRunnerEnabled: (bool): Optional. Must be 'TRUE' for the virtual service templates.
         - assign_transactions: Assigns the transactions to the virtual service template. 
                 Transactions should belong to the same service as the virtual service template.
             args(dict): Dictionary with the following required parameters:
@@ -248,23 +236,12 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args.get("offset", 0),
                     )
                 case "create":
-                    vs_data = VirtualServiceTemplate(
-                        id=args.get("id", 0),
-                        name=args["name"],
-                        serviceId=args["serviceId"],
-                        replicas=args.get("replicas", 1),
-                        noMatchingRequestPreference=args.get("noMatchingRequestPreference", "return404"),
-                        mockServiceTransactions=args.get("mockServiceTransactions", []),
-                        httpRunnerEnabled=args.get("httpRunnerEnabled", False),
-                    )
                     return await vs_manager.create(
                         args["workspace_id"],
-                        vs_data.name,
-                        vs_data.serviceId,
-                        vs_data.replicas,
-                        vs_data.noMatchingRequestPreference,
-                        vs_data.mockServiceTransactions,
-                        vs_data.httpRunnerEnabled,
+                        args["name"],
+                        args["serviceId"],
+                        args.get("noMatchingRequestPreference", "return404"),
+                        args.get("mockServiceTransactions", [])
                     )
                 case "update":
                     return await vs_manager.update(
@@ -272,10 +249,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["template_id"],
                         args.get("name"),
                         args.get("serviceId"),
-                        args.get("replicas"),
                         args.get("noMatchingRequestPreference"),
-                        args.get("mockServiceTransactions", []),
-                        args.get("httpRunnerEnabled"),
+                        args.get("mockServiceTransactions", [])
                     )
                 case "assign_transactions":
                     return await vs_manager.assign_transactions(

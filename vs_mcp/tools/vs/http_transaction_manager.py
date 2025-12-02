@@ -46,7 +46,7 @@ class HttpTransactionManager:
             result_formatter=format_http_transactions,
             params=parameters)
 
-    async def create(self, transaction_name: str, workspace_id: int, service_id, type: str,
+    async def create(self, transaction_name: str, workspace_id: int, service_id,
                      dsl: GenericDsl, delay: int) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
@@ -70,7 +70,7 @@ class HttpTransactionManager:
             "transactions": [
                 {
                     "serviceId": service_id,
-                    "type": type,
+                    "type": "HTTP",
                     "dsl": dsl_dict,  # Use the dict version
                     "name": transaction_name,
                 }
@@ -88,7 +88,7 @@ class HttpTransactionManager:
             params=parameters
         )
 
-    async def update(self, id: int, transaction_name: str, workspace_id: int, type: str,
+    async def update(self, id: int, transaction_name: str, workspace_id: int,
                      dsl: GenericDsl, delay: int) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
@@ -110,7 +110,7 @@ class HttpTransactionManager:
                 }
         transaction_body = {
             "id": id,
-            "type": type,
+            "type": "HTTP",
             "dsl": dsl_dict,
             "name": transaction_name
         }
@@ -184,168 +184,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             - Keep JSON objects outside helper calls; helpers should only produce values.
             - Do not nest helpers more than 1–2 levels deep.
             - Each helper must have exactly one opening and one closing brace; do not add extra # or braces.
-            - Conditional helpers ({{#eq}}, {{#neq}}, {{#gt}}, {{#lt}}, etc.) must use variable names directly without quotes.
-            - Use {{else}} only once per conditional; do not use {{#else}} or {{/else}}.
-            - Avoid repeating the same condition in multiple nested blocks.
-            - Templates must be valid JSON and readable.
-            2. Explicit Helper Syntax:
-            - Opening a block helper: {{#helperName [arguments]}}
-              Example: {{#assign "userId"}} or {{#eq userId "0"}}
-            - Closing a block helper: {{/helperName}}
-              Example: {{/assign}} or {{/eq}}
-            - Else clause: {{else}} (no #, no /)
-              Example:
-                {{#eq userId "0"}}
-                  { "error": "User not found" }
-                {{else}}
-                  { "id": {{userId}}, "name": "John Doe" }
-                {{/eq}}
-            - Variable interpolation inside JSON: {{variableName}} only for values
-            - JSON objects stay outside helpers.
-            3. Fields that support templates:
-            - ResponseDsl.content: Base64 encoded response body that can include templates using {{}} syntax.
-            4. Available helpers (WireMock + Blazemeter custom helpers) — all use {{}} style:
-            5. LLM-Specific Best Practices:
-            - Produce one helper per line.
-            - Do not combine multiple logic operations in a single line.
-            - Use sequential conditionals for multiple branches instead of deeply nested {{#eq}} blocks.
-            - Keep templates simple, granular, and maintainable.
-            - Always follow the explicit helper syntax rules above to prevent extra braces or invalid {{#else}} usage.
-            6. Example Templates:
-            # --- Assigning and Joining Values ---
-            {{#assign 'operation'}}{{join request.method request.url ' '}}{{/assign}}
-            Result: {{operation}}
-            
-            # --- Accessing Request Parts ---
-            Method: {{request.method}}
-            URL: {{request.url}}
-            Absolute URL: {{request.absoluteUrl}}
-            Path: {{request.path}}
-            First path segment: {{request.path.1}}
-            Host: {{request.host}}
-            Port: {{request.port}}
-            Base URL: {{request.baseUrl}}
-            Scheme: {{request.scheme}}
-            Client IP: {{request.clientIp}}
-            Logged Date: {{request.loggedDate}}
-            Logged Date Instant: {{request.loggedDateInstant}}
-            
-            # --- Query Parameters ---
-            Query all: {{request.query}}
-            Query 'status': {{request.query.status}}
-            First value: {{request.query.status.0}}
-            With default fallback:
-            {{val request.query.type or='none' assign='queryType'}}
-            Query type: {{queryType}}
-            
-            # --- Headers ---
-            All headers: {{request.headers}}
-            Single header: {{request.headers.Content-Type}}
-            First header value: {{request.headers.Content-Type.0}}
-            Iterate headers:
-            {{#each request.headers as |hdr|}}
-            {{hdr.name}}: {{hdr.value}}
-            {{/each}}
-            
-            # --- Body and Body Parsing ---
-            Raw body: {{request.body}}
-            Body as JSON: {{jsonPath request.body '$'}}
-            Body as XML: {{xpath request.body '//element'}}
-            Extract value using JSONPath:
-            {{#assign 'price'}}{{jsonPath request.body '$.price'}}{{/assign}}
-            Extracted price: {{price}}
-            Extract value using XPath:
-            {{#assign 'id'}}{{xpath request.body '//order/id/text()'}}{{/assign}}
-            Extracted ID: {{id}}
-            
-            # --- Conditional Logic ---
-            {{#eq request.query.status 'pending'}}
-            Order is pending
-            {{else}}
-            Order status: {{request.query.status}}
-            {{/eq}}
-            
-            # --- Arrays and Ranges ---
-            {{#assign 'a'}}{{array 'A' 'B' 'C'}}{{/assign}}
-            Joined: {{arrayJoin ',' a}}
-            {{#assign 'b'}}{{arrayAdd a 'D' position=1}}{{/assign}}
-            Added: {{arrayJoin ',' b}}
-            {{#assign 'c'}}{{arrayRemove b position=2}}{{/assign}}
-            Removed: {{arrayJoin ',' c}}
-            
-            {{#each (range 1 3) as |i|}}
-            Item {{i}}
-            {{/each}}
-            
-            # --- String Helpers ---
-            {{join 'Order' request.path.1 'confirmed'}}
-            {{replace 'foo-bar' '-' '_'}}
-            {{upper request.method}}
-            {{lower user.role}}
-            {{capitalize 'hello world'}}
-            {{capitalizeFirst 'wiremock templates'}}
-            {{defaultIfEmpty request.query.comment 'none'}}
-            {{cut 'a,b,c' ','}}
-            {{slugify 'Hello World!'}}
-            {{stripTags '<b>bold</b>'}}
-            {{substring 'abcdef' 2 5}}
-            {{ljust 'hi' size=5 pad='*'}}
-            {{rjust 'ok' size=5 pad='-'}}
-            
-            # --- Date and Time ---
-            Requested at: {{now}}
-            Formatted date: {{dateFormat now 'yyyy-MM-dd HH:mm:ss'}}
-            
-            # --- Math and Size ---
-            {{#assign 'qty'}}{{jsonPath request.body '$.quantity'}}{{/assign}}
-            {{#assign 'total'}}{{math price '*' qty}}{{/assign}}
-            Total: {{total}}
-            Item count: {{size request.query.items}}
-            
-            # --- Regex Extraction ---
-            {{#assign 'num'}}{{regexExtract request.path.1 '([0-9]+)'}}{{/assign}}
-            Extracted number: {{num}}
-            
-            # --- Using "with" Context ---
-            {{#with request.headers}}
-            User-Agent: {{User-Agent}}
-            {{/with}}
-            
-            # --- Available Request Parts Summary ---
-            request.method → HTTP method (GET, POST, etc.)
-            request.url → Path + query string
-            request.path → Path only
-            request.path.N → Path segment by index
-            request.baseUrl → Full base URL
-            request.query → Map of query parameters
-            request.query.NAME → Value(s) of query param
-            request.headers → Map of headers
-            request.headers.NAME → Header value(s)
-            request.body → Raw request body (string)
-            request.bodyAsBase64 → Body as Base64 string
-            request.clientIp → Request origin IP
-            request.loggedDate → Timestamp (long)
-            request.loggedDateInstant → ISO timestamp
-            request.scheme → http / https
-            request.host → Host header
-            request.port → Port number
-            request.absoluteUrl → Full URL with host/port
-            # --- Available Http Call Action Templates ---
-            httpcalls.actionName.response.body → Response body of the http call action named "actionName"
-            httpcalls.actionName.response.statuscode → Status code of the http call action named "actionName"
-            httpcalls.actionName.request.url → Request URL of the http call action named "actionName"
-            httpcalls.actionName.request.method → Request method of the http call action named "actionName
-            httpcalls.actionName.request.headers → Request headers of the http call action named "actionName"
-            httpcalls.actionName.request.body → Request body of the http call action named "actionName
-             # --- Available Virtual Service Configuration Templates ---
-            config.var1 → Value of the virtual service configuration parameter named "var1"
-            
-            # --- Error Handling Notes ---
-            If the response returns raw unparsed template text (for example, showing {{request.method}} instead of the actual value), it means the template syntax is **invalid or malformed** and WireMock skipped template parsing.  
-            If the response returns **HTTP 500** with an exception in the WireMock logs, it means the syntax was **parsed correctly but failed during runtime execution** (for example, referencing a non-existent variable, invalid JSONPath, or invalid helper argument).
-            # --- Important Notes ---
-            Each helper must always be opened and closed when block form is used (e.g. {{#assign ...}}{{/assign}}, {{#eq ...}}{{/eq}}, {{#each ...}}{{/each}}).  
-            Inline helpers like {{join ...}}, {{replace ...}}, {{upper ...}}, {{jsonPath ...}} do not require closing tags.
+            - Use handlebars helpers supported by wiremock, specified in https://wiremock.org/docs/response-templating/
+            - Use validate_template and convert_template actions to validate and convert templates before using them in transaction definition.
         Actions:
         - read: Read an HTTP Transaction. Get the information of a transaction.
             args(dict): Dictionary with the following required parameters:
@@ -371,7 +211,6 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(Transaction): A Transaction object with the following fields:
                 name (str): Mandatory. The name of the transaction.
                 serviceId (int): Mandatory. The id of the service to create the transaction in.
-                type (str): Mandatory. The type of the transaction.
                 dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace.
                 delay (int): Optional. Response delay in milliseconds.
@@ -381,7 +220,6 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(Transaction): A Transaction object with the following fields:
                 id (int): Mandatory. The id of the transaction.
                 name (str): Mandatory. The new name of the transaction.
-                type (str): Mandatory. The type of the transaction.
                 dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace. 
                 delay (int): Optional. Response delay in milliseconds.
@@ -422,7 +260,6 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["name"],
                         args["workspace_id"],
                         args["serviceId"],
-                        args["type"],
                         args["dsl"],
                         args.get("delay", None),
                     )
@@ -431,7 +268,6 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["id"],
                         args["name"],
                         args["workspace_id"],
-                        args["type"],
                         args["dsl"],
                         args.get("delay", None),
                     )

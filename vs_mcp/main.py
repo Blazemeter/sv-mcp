@@ -81,9 +81,13 @@ def run(log_level: str = "DEBUG", mode: str = "mcp"):
         mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")
         register_tools(mcp, token)
         mcp.run(transport="stdio")
-    elif mode == "http":
-        mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level=cast(LOG_LEVELS, log_level),
-                      stateless_http=True)
+    elif mode in ("http", "http-stateless"):
+        mcp = FastMCP(
+            "blazemeter-mcp",
+            instructions=instructions,
+            log_level=cast(LOG_LEVELS, log_level),
+            stateless_http=(mode == "http-stateless")
+        )
         register_tools(mcp, token)
         mcp.run(transport="streamable-http")
 
@@ -110,6 +114,12 @@ if __name__ == "__main__":
     )
 
     parser.add_argument(
+        "--stateless",
+        action="store_true",
+        help="Execute MCP Server In HTTP stateless mode"
+    )
+
+    parser.add_argument(
         "--log-level",
         default="DEBUG",  # By default, only critical errors
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
@@ -125,6 +135,8 @@ if __name__ == "__main__":
         run(log_level="CRITICAL", mode="mcp")
     elif args.http:
         run(log_level=args.log_level.upper(), mode="http")
+    elif args.stateless:
+        run(log_level=args.log_level.upper(), mode="http-stateless")
     else:
         logo_ascii = rf"""
           ____  _                __  __      _            

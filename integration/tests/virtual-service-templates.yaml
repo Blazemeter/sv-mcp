@@ -1,0 +1,291 @@
+# TEST DEFINITION
+variables:
+  default_service_id: 195
+  template-name: template-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+  workspace_id: 1622
+sessions:
+  - name: Create HTTP Virtual Service Template
+    allowed_tools:
+      - virtual_services_virtual_service_template
+      - virtual_services_service
+    tests:
+      - name: "Create a virtual service template"
+        prompt: |
+          Create Virtual Service Template with name {{template-name}} with http endpoint preference,  Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].id"
+            variable_name: "template_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+              args.name: "{{template-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].name"
+            value: "{{template-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].replicas"
+            value: "1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].noMatchingRequestPreference"
+            value: "return404"
+      - name: "Read a virtual service template"
+        prompt: |
+          Get virtual service template {{template_id}} information in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{template_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].id"
+            value: "{{template_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].name"
+            value: "{{template-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].replicas"
+            value: "1"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].noMatchingRequestPreference"
+            value: "return404"
+      - name: "List virtual service templates"
+        prompt: |
+          List virtual service templates information in workspace {{workspace_id}} with limit 5 and offset 10.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+              args.limit: "5"
+              args.offset: "10"
+  - name: Create Virtual Service Template and Assign transactions
+    allowed_tools:
+      - virtual_services_virtual_service_template
+      - virtual_services_http_transaction
+    tests:
+      - name: "Create a virtual service template"
+        prompt: |
+          Create Virtual Service Template with name assign-{{template-name}} , Service {{default_service_id}} in workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].id"
+            variable_name: "template_id"
+          - type: jsonpath
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].serviceId"
+            variable_name: "service_id"
+      - name: "Create a transaction"
+        prompt: |
+          Create a simple transaction in service {{default_service_id}} , workspace {{workspace_id}}. Transaction name {{transaction-name}}, url equals /user.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+      - name: "Assign a transaction to the template"
+        prompt: |
+          Assign transaction {{txn_id}} to virtual service template {{template_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "assign_transactions"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{template_id}}"
+              args.transaction_ids: "[{{txn_id}}]"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].mockServiceTransactions[0].txnId"
+            value: "{{txn_id}}"
+      - name: "Unassign a transaction"
+        prompt: |
+          Unassign transaction {{txn_id}} from the virtual service template {{template_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "unassign_transactions"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{template_id}}"
+              args.transaction_ids: "[{{txn_id}}]"
+  - name: Create virtual service template for keystore test
+    allowed_tools:
+      - virtual_services_virtual_service_template
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Create virtual service template for keystore test"
+        prompt: |
+          Create Virtual Service Template with name keystore-{{template-name}} in the Service {{default_service_id}} in the workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].id"
+            variable_name: "template_id"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Update virtual service template, assign server keystore"
+        prompt: |
+          Assign keystore asset {{asset_id}} with alias "localhost" to virtual service template {{template_id}} in workspace {{workspace_id}}
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "assign_keystore"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{template_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "SERVER_KEYSTORE"
+  - name: Create virtual service template for 2 way ssl test
+    allowed_tools:
+      - virtual_services_virtual_service_template
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Create virtual service template for 2way ssl test"
+        prompt: |
+          Create Virtual Service Template with name 2ssl-{{template-name}} in the Service {{default_service_id}} in the workspace {{workspace_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].id"
+            variable_name: "template_id"
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Update virtual service template, assign server keystore + truststore"
+        prompt: |
+          Assign asset {{asset_id}} with alias "localhost" to virtual service template {{template_id}} in workspace {{workspace_id}} for usage in 2 way ssl setup (truststore and keystore)
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_virtual_service_template"
+            params:
+              action: "assign_keystore_truststore"
+              args.asset_id: "{{asset_id}}"
+              args.workspace_id: "{{workspace_id}}"
+              args.id: "{{template_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].assets[0].assetId"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_virtual_service_template"
+            path: "$.result[0].assets[0].assetUsageType"
+            value: "SERVER_KEYSTORE_TRUSTSTORE"

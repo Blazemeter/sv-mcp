@@ -1,0 +1,49 @@
+# TEST DEFINITION
+variables:
+  default_service_id: 195
+  workspace_id: 1622
+  service-name: service-{{now format='unix'}}
+  transaction-name: action-transaction-{{now format='unix'}}
+sessions:
+  - name: Sandbox operations
+    allowed_tools:
+      - virtual_services_http_transaction
+      - virtual_services_sandbox
+    tests:
+      - name: "Create transaction for the sandbox test"
+        prompt: |
+          Create a new transaction with name: {{transaction-name}} in the Service {{default_service_id}} of the workspace {{workspace_id}}.
+          The transaction should:
+          - Expose the endpoint: GET matches /test-transaction
+          - Return response "response" with status 201
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_http_transaction"
+            path: "$.result[0].id"
+            variable_name: "txn_id"
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_http_transaction"
+            params:
+              action: "create"
+              args.workspace_id: "{{workspace_id}}"
+      - name: "Test this transaction in the sandbox"
+        prompt: |
+          Test this transaction {{txn_id}} in workspace {{workspace_id}} in the sandbox
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_sandbox"
+            params:
+              action: "init"
+              args.workspace_id: "{{workspace_id}}"
+              args.transaction_id: "{{txn_id}}"
+          - type: tool_param_equals
+            tool: "virtual_services_sandbox"
+            params:
+              action: "test_request"
+              args.request.method: "GET"
+              args.request.path: "/test-transaction"
+          - type: tool_result_matches_json
+            tool: "virtual_services_sandbox"
+            path: "$.result[0].status"
+            value: "201"

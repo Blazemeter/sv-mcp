@@ -1,0 +1,63 @@
+name: "VS MCP TEST SUITE"
+test_files:
+  - tests/assets.yaml
+  - tests/configurations.yaml
+  - tests/locations.yaml
+  - tests/services.yaml
+  - tests/transactions.yaml
+  - tests/actions.yaml
+  - tests/sandbox.yaml
+  - tests/virtual-services.yaml
+  - tests/virtual-service-templates.yaml
+criteria:
+  success_rate: 0.75
+providers:
+  - name: gemini-2.5-flash-lite
+    type: VERTEX
+    project_id: silver-pact-221712
+    credentials_path: acc.json
+    model: gemini-2.5-flash-lite
+  - name: gemini-2.5-flash
+    type: VERTEX
+    project_id: silver-pact-221712
+    credentials_path: acc.json
+    model: gemini-2.5-flash
+  - name: gemini-2.5-pro
+    type: VERTEX
+    project_id: silver-pact-221712
+    credentials_path: acc.json
+    model: gemini-2.5-pro
+  - name: gemini-2.0-flash-001
+    type: VERTEX
+    project_id: silver-pact-221712
+    credentials_path: acc.json
+    model: gemini-2.0-flash-001
+servers:
+  - name: vs-mcp
+    type: stdio
+    server_delay: 20s
+    process_delay: 1s
+    command: docker run --rm -i -e SOURCE_WORKING_DIRECTORY=/tmp -e API_KEY_ID=95c1e2cea76521b8452be3f4 -e API_KEY_SECRET=25584455a5c2577732e725ed2ef05c8bd5367dece48e4453a26b1843734226c4d8c8956b -e VS_URL=https://ci-mock.blazemeter.net/api/v1 -e BZM_URL=https://ci.blazemeter.net/api/v4 -v /users/dmykhaliev/logs:/tmp vs-mcp:latest
+agents:
+  - name: gemini-2.5-flash-lite-agent
+    servers:
+      - name: vs-mcp
+    provider: gemini-2.5-flash-lite
+  - name: gemini-2.5-flash-agent
+    servers:
+      - name: vs-mcp
+    provider: gemini-2.5-flash
+#  - name: gemini-2.5-pro
+#    servers:
+#      - name: vs-mcp
+#    provider: gemini-2.5-pro
+  - name: gemini-2.0-flash-001-agent
+    servers:
+      - name: vs-mcp
+    provider: gemini-2.0-flash-001
+settings:
+  verbose: true
+  max_iterations: 20
+  #  timeout: 30s
+  test_delay: 1s
+  tool_timeout: 1s

@@ -1,0 +1,80 @@
+# TEST DEFINITION
+variables:
+  workspace_id: 1622
+  service-name: service-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+sessions:
+  - name: Service operations
+    allowed_tools:
+      - virtual_services_service
+    tests:
+      - name: "Create a service"
+        prompt: |
+          Create a service {{service-name}} in my workspace 1622. Remember it's ID for future usage.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_service"
+            path: "$.result[0].id"
+            variable_name: "service_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_service"
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "create"
+              args.workspace_id: 1622
+              args.service_name: "{{service-name}}"
+      - name: "Update a service"
+        prompt: |
+          Update a service with ID {{service_id}} in workspace {{workspace_id}}. Set new name updated-{{service-name}}
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_service"
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "update"
+              args.workspace_id: 1622
+              args.id: "{{service_id}}"
+              args.service_name: "updated-{{service-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_service"
+            path: "$.result[0].name"
+            value: "updated-{{service-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_service"
+            path: "$.result[0].id"
+            value: "{{service_id}}"
+      - name: "Get created service"
+        prompt: |
+          Read service {{service_id}} in workspace {{workspace_id}} information
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_service"
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "read"
+              args.workspace_id: 1622
+              args.service_id: "{{service_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_service"
+            path: "$.result[0].name"
+            value: "updated-{{service-name}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_service"
+            path: "$.result[0].id"
+            value: "{{service_id}}"
+      - name: "List services"
+        prompt: |
+          List services in workspace {{workspace_id}} with limit 5 and offset 10.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_service"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+              args.limit: "5"
+              args.offset: "10"

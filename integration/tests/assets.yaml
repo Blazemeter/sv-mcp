@@ -1,0 +1,105 @@
+# TEST DEFINITION
+variables:
+  workspace_id: 1622
+  service-name: service-{{now format='unix'}}
+  transaction-name: transaction-{{now format='unix'}}
+  transaction-name-for-update: for-update-{{now format='unix'}}
+sessions:
+  - name: Asset operations
+    allowed_tools:
+      - virtual_services_asset
+      - virtual_services_tracking
+    tests:
+      - name: "Upload keystore asset"
+        prompt: |
+          Upload /tmp/test.jks file into my workspace 1622.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_asset"
+            path: "$.result[0].tracking_id"
+            variable_name: "tracking_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "upload"
+              args.workspace_id: 1622
+              args.file_path: "/tmp/test.jks"
+      - name: "Read asset tracking info"
+        prompt: |
+          Read asset tracking info {{tracking_id}}.
+        extractors:
+          - type: jsonpath
+            tool: "virtual_services_tracking"
+            path: "$.result[0].data.assetId"
+            variable_name: "asset_id"
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_tracking"
+          - type: tool_param_equals
+            tool: "virtual_services_tracking"
+            params:
+              action: "read_asset_tracking"
+              args.tracking_id: "{{tracking_id}}"
+      - name: "Set keystore passwords"
+        prompt: |
+          Set keystore password "pass" and key alias password "localhost":"pass" for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "set_keystore_passwords"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+              args.keystore_password: "pass"
+      - name: "Read asset"
+        prompt: |
+          Read information for the asset {{asset_id}} in workspace {{workspace_id}}.
+        assertions:
+          - type: tool_called
+            tool: "virtual_services_asset"
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "read"
+              args.workspace_id: "{{workspace_id}}"
+              args.asset_id: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].id"
+            value: "{{asset_id}}"
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].name"
+            value: "test.jks"
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].type"
+            value: "CERTIFICATE"
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].primaryMetadata.aliases.localhost.type"
+            value: "KEY_PAIR"
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].primaryMetadata.aliases.localhost.password"
+            value: "cGFzcw=="
+          - type: tool_result_matches_json
+            tool: "virtual_services_asset"
+            path: "$.result[0].primaryMetadata.keystore_password"
+            value: "cGFzcw=="
+      - name: "List assets"
+        prompt: |
+          List assets in workspace {{workspace_id}} with limit 5 and offset 10.
+        assertions:
+          - type: tool_param_equals
+            tool: "virtual_services_asset"
+            params:
+              action: "list"
+              args.workspace_id: "{{workspace_id}}"
+              args.limit: "5"
+              args.offset: "10"

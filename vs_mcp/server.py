@@ -33,20 +33,20 @@ def register_tools(mcp, token: Optional[BzmToken]):
         enabled_set = {name.strip().lower() for name in raw.split(",")}
 
     registry: Dict[str, Callable[[object, Optional[BzmToken]], None]] = {
-        "user_manager": register_user_manager,
-        "workspace_manager": register_workspace_manager,
-        "account_manager": register_account_manager,
-        "service_manager": register_service_manager,
-        "http_transaction_manager": http_register_transaction_manager,
-        "messaging_transaction_manager": messaging_register_transaction_manager,
-        "virtual_service_manager": register_virtual_service_manager,
-        "virtual_service_template_manager": register_virtual_service_template_manager,
-        "tracking_manager": register_tracking_manager,
-        "location_manager": register_location_manager,
-        "sandbox_manager": register_sandbox_manager,
-        "action_manager": register_action_manager,
-        "configuration_manager": register_configuration_manager,
-        "asset_manager": register_asset_manager,
+        "blazemeter_user": register_user_manager,
+        "blazemeter_workspaces": register_workspace_manager,
+        "blazemeter_account": register_account_manager,
+        "virtual_services_service": register_service_manager,
+        "virtual_services_http_transaction": http_register_transaction_manager,
+        "virtual_services_messaging_transaction": messaging_register_transaction_manager,
+        "virtual_services_virtual_service": register_virtual_service_manager,
+        "virtual_services_virtual_service_template": register_virtual_service_template_manager,
+        "virtual_services_tracking": register_tracking_manager,
+        "virtual_services_location": register_location_manager,
+        "virtual_services_sandbox": register_sandbox_manager,
+        "virtual_services_action": register_action_manager,
+        "virtual_services_configuration": register_configuration_manager,
+        "virtual_services_asset": register_asset_manager,
     }
 
     for name, register_fn in registry.items():

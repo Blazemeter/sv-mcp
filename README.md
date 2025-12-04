@@ -269,7 +269,7 @@ If the environment variable is not set or is an empty string, all available tool
 To enable only certain tools, set the environment variable to a comma-separated list of tool names.
 
 Example:
-MCP_ENABLED_TOOLS="user_manager,account_manager,virtual_service_manager"
+MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_service"
 
 
 ### **MCP Client Configuration for Local testing using HTTP**

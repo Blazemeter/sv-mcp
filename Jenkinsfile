@@ -55,6 +55,9 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Authenticate with GCP Artifact Registry
+                    dockerLoginGCR('GoogleCredForJenkins2')
+                    
                     BuildkitManager buildkit = new BuildkitManager(this)
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     def tags = [

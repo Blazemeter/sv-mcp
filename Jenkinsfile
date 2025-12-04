@@ -55,15 +55,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Authenticate with GCP Artifact Registry in jenkins-docker-agent container
-                    container('jenkins-docker-agent') {
-                        withCredentials([file(credentialsId: 'GoogleCredForJenkins2', variable: 'GCP_KEY')]) {
-                            sh """
-                                cat \${GCP_KEY} | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
-                            """
-                        }
-                    }
-                    
                     BuildkitManager buildkit = new BuildkitManager(this)
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     def tags = [

@@ -64,10 +64,8 @@ pipeline {
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
                     
-                    // Generate tags with custom repository
-                    List tags = buildkit.getDefaultTags().collect { tag ->
-                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${tag}"
-                    }
+                    // Generate tags with custom repository using getDefaultTags
+                    List tags = buildkit.getDefaultTags(env.IMAGE_NAME, [env.IMAGE_REPO])
                     
                     buildkit.build(
                         dockerFile: "Dockerfile",

@@ -259,6 +259,19 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Assign Keystore + Truststore          | Assigns keystore asset to the Virtual Service Template, to be used as both Keystore and Truststore |
 
 ---
+
+### Enabling or Disabling MCP Tools
+
+The MCP server supports enabling or disabling specific tools at startup using the environment variable MCP_ENABLED_TOOLS.
+If the environment variable is not set or is an empty string, all available tools are automatically enabled.
+
+
+To enable only certain tools, set the environment variable to a comma-separated list of tool names.
+
+Example:
+MCP_ENABLED_TOOLS="user_manager,account_manager,virtual_service_manager"
+
+
 ### **MCP Client Configuration for Local testing using HTTP**
 1. Run main.py with --http flag
 2. Connect to the MCP server using the following URL:

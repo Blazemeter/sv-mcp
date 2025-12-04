@@ -56,24 +56,32 @@ pipeline {
             steps {
                 script {
                     BuildkitManager buildkit = new BuildkitManager(this)
-                    def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
-                    def tags = [
-                        "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:${sanitisedBranch}-${env.BUILD_NUMBER}",
-                        "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-${sanitisedBranch}"
-                    ]
-                    if (env.BRANCH_NAME == 'master') {
-                        tags.add("us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-master")
-                    } else if (env.BRANCH_NAME.contains('release')) {
-                        tags.add("us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-release")
-                    }
                     
-                    buildkit.build(tags: tags)
-                    
-                    // Store buildkit and image details for scans
-                    this.buildkit = buildkit
+                    // Set image repository and name
                     env.IMAGE_REPO = "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp"
                     env.IMAGE_NAME = "vs-mcp"
+                    
+                    def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
+                    
+                    // Generate tags with custom repository
+                    List tags = buildkit.getDefaultTags().collect { tag ->
+                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${tag}"
+                    }
+                    
+                    buildkit.build(
+                        dockerFile: "Dockerfile",
+                        buildArgs: [
+                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
+                            "BRANCH_NAME=${env.BRANCH_NAME}",
+                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
+                            "COMMIT_HASH=${env.GIT_COMMIT}"
+                        ],
+                        tags: tags
+                    )
+                    
+                    // Store buildkit for scans
+                    this.buildkit = buildkit
                 }
             }
         }

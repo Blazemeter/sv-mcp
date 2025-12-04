@@ -56,10 +56,24 @@ pipeline {
             steps {
                 script {
                     BuildkitManager buildkit = new BuildkitManager(this)
-                    buildkit.build(imageName: "vs-mcp")
+                    def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
+                    def tags = [
+                        "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:${sanitisedBranch}-${env.BUILD_NUMBER}",
+                        "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-${sanitisedBranch}"
+                    ]
+                    if (env.BRANCH_NAME == 'master') {
+                        tags.add("us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-master")
+                    } else if (env.BRANCH_NAME.contains('release')) {
+                        tags.add("us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:latest-release")
+                    }
                     
-                    // Store buildkit for scans
+                    buildkit.build(tags: tags)
+                    
+                    // Store buildkit and image details for scans
                     this.buildkit = buildkit
+                    env.IMAGE_REPO = "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp"
+                    env.IMAGE_NAME = "vs-mcp"
+                    env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
                 }
             }
         }
@@ -77,10 +91,15 @@ pipeline {
             when { expression { params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    runPrismaCloudScanOnK8s(
-                        imageTag: "us.gcr.io/verdant-bulwark-278/vs-mcp:${env.BRANCH_NAME}-${env.BUILD_NUMBER}",
-                        buildkitManager: this.buildkit
+                    buildkit.pull("${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}")
+                    prismaCloudScanImage(
+                        dockerAddress: 'unix:///var/run/docker.sock',
+                        image: "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        logLevel: 'info',
+                        resultsFile: 'prisma-cloud-scan-results.json',
+                        ignoreImageBuildTime: true
                     )
+                    prismaCloudPublish(resultsFilePattern: 'prisma-cloud-scan-results.json')
                 }
             }
         }
@@ -88,6 +107,11 @@ pipeline {
     
     post {
         always {
+            script {
+                if (binding.hasVariable('buildkit') && buildkit != null) {
+                    buildkit.cleanImages()
+                }
+            }
             cleanWs()
         }
         success {

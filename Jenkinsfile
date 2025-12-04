@@ -55,18 +55,16 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    BuildkitManager buildkit = new BuildkitManager(this)
-                    
-                    // Authenticate BuildKit with GCP Artifact Registry
-                    container('buildkit') {
+                    // Authenticate with GCP Artifact Registry in jenkins-docker-agent container
+                    container('jenkins-docker-agent') {
                         withCredentials([file(credentialsId: 'GoogleCredForJenkins2', variable: 'GCP_KEY')]) {
                             sh """
-                                gcloud auth activate-service-account --key-file=\${GCP_KEY}
-                                gcloud auth configure-docker us-docker.pkg.dev --quiet
+                                cat \${GCP_KEY} | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
                             """
                         }
                     }
                     
+                    BuildkitManager buildkit = new BuildkitManager(this)
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     def tags = [
                         "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp/vs-mcp:${sanitisedBranch}-${env.BUILD_NUMBER}",

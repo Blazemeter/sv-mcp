@@ -55,12 +55,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    // Authenticate with GCR/Artifact Registry
-                    dockerLoginGCR('GoogleCredForJenkins2')
-                    
-                    // Configure Docker for Artifact Registry
-                    sh "gcloud auth configure-docker us-docker.pkg.dev --quiet"
-                    
                     BuildkitManager buildkit = new BuildkitManager(this)
                     
                     // Set image repository and name
@@ -70,8 +64,25 @@ pipeline {
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
                     
+                    // Authenticate and create Docker config for BuildKit
+                    container('jenkins-docker-agent') {
+                        withCredentials([file(credentialsId: 'GoogleCredForJenkins2', variable: 'GCP_KEY')]) {
+                            sh """
+                                # Create Docker config with GCP credentials
+                                cat \${GCP_KEY} | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
+                                
+                                # Copy Docker config to shared workspace for BuildKit access
+                                mkdir -p ${WORKSPACE}/.docker
+                                cp -r ~/.docker/config.json ${WORKSPACE}/.docker/config.json || true
+                            """
+                        }
+                    }
+                    
                     // Generate tags with custom repository using getDefaultTags
                     List tags = buildkit.getDefaultTags(env.IMAGE_NAME, [env.IMAGE_REPO])
+                    
+                    // Set DOCKER_CONFIG environment variable for BuildKit
+                    def dockerConfigPath = "${WORKSPACE}/.docker"
                     
                     buildkit.build(
                         dockerFile: "Dockerfile",
@@ -79,7 +90,8 @@ pipeline {
                             "BUILD_NUMBER=${env.BUILD_NUMBER}",
                             "BRANCH_NAME=${env.BRANCH_NAME}",
                             "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                            "COMMIT_HASH=${env.GIT_COMMIT}"
+                            "COMMIT_HASH=${env.GIT_COMMIT}",
+                            "DOCKER_CONFIG=${dockerConfigPath}"
                         ],
                         tags: tags
                     )

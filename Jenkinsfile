@@ -55,6 +55,12 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
+                    // Authenticate with GCR/Artifact Registry
+                    dockerLoginGCR('GoogleCredForJenkins2')
+                    
+                    // Configure Docker for Artifact Registry
+                    sh "gcloud auth configure-docker us-docker.pkg.dev --quiet"
+                    
                     BuildkitManager buildkit = new BuildkitManager(this)
                     
                     // Set image repository and name

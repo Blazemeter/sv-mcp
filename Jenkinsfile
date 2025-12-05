@@ -2,8 +2,6 @@ clearWorkspaceAsRoot()
 
 @Library('jenkins_library') _
 
-import com.blazemeter.buildkit.BuildkitManager
-
 pipeline {
     agent {
         kubernetes {
@@ -55,11 +53,46 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    BuildkitManager buildkit = new BuildkitManager(this)
-                    buildkit.build(imageName: "vs-mcp")
+                    // Set image repository and name
+                    env.IMAGE_REPO = "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp"
+                    env.IMAGE_NAME = "vs-mcp"
                     
-                    // Store buildkit for scans
-                    this.buildkit = buildkit
+                    def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
+                    env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
+                    
+                    // Authenticate with GCR/Artifact Registry
+                    dockerLoginGCR('GoogleCredForJenkins2')
+                    sh "gcloud auth configure-docker us-docker.pkg.dev --quiet"
+                    
+                    // Generate tags
+                    def tags = [
+                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-${sanitisedBranch}"
+                    ]
+                    if (env.BRANCH_NAME == 'master') {
+                        tags.add("${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-master")
+                    } else if (env.BRANCH_NAME.contains('release')) {
+                        tags.add("${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-release")
+                    }
+                    
+                    // Build Docker image using standard Docker
+                    def tagArgs = tags.collect { "-t ${it}" }.join(' ')
+                    sh """
+                        docker build ${tagArgs} \
+                            --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
+                            --build-arg BRANCH_NAME=${env.BRANCH_NAME} \
+                            --build-arg BUILD_TIME=${currentBuild.startTimeInMillis} \
+                            --build-arg COMMIT_HASH=${env.GIT_COMMIT} \
+                            -f Dockerfile .
+                    """
+                    
+                    // Push all tags
+                    tags.each { tag ->
+                        sh "docker push ${tag}"
+                    }
+                    
+                    // Store image details for scans
+                    env.DOCKER_IMAGE = "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
@@ -77,10 +110,14 @@ pipeline {
             when { expression { params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    runPrismaCloudScanOnK8s(
-                        imageTag: "us.gcr.io/verdant-bulwark-278/vs-mcp:${env.BRANCH_NAME}-${env.BUILD_NUMBER}",
-                        buildkitManager: this.buildkit
+                    prismaCloudScanImage(
+                        dockerAddress: 'unix:///var/run/docker.sock',
+                        image: "${env.DOCKER_IMAGE}",
+                        logLevel: 'info',
+                        resultsFile: 'prisma-cloud-scan-results.json',
+                        ignoreImageBuildTime: true
                     )
+                    prismaCloudPublish(resultsFilePattern: 'prisma-cloud-scan-results.json')
                 }
             }
         }
@@ -88,10 +125,18 @@ pipeline {
     
     post {
         always {
+            script {
+                // Clean up Docker images
+                sh """
+                    docker rmi ${env.DOCKER_IMAGE} || true
+                    docker system prune -f || true
+                """
+            }
             cleanWs()
         }
         success {
             script {
+                echo "Build succeeded"
                 // Send Slack notification on success
                 slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
                 slackSend(channel: "#bm-notifications-jenkins", message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")

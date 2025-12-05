@@ -127,10 +127,12 @@ pipeline {
             cleanWs()
         }
         success {
-            echo "Build succeeded"
-            // Send Slack notification on success
-            // slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
-            // slackSend(channel: "#bm-notifications-jenkins", message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
+            script {
+                echo "Build succeeded"
+                // Send Slack notification on success
+                // slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
+                // slackSend(channel: "#bm-notifications-jenkins", message: "SUCCESS <${BUILD_URL} | *${JOB_NAME}*>.", color: "#00ff00")
+            }
         }
         failure {
             script {

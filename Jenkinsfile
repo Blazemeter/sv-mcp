@@ -2,8 +2,6 @@ clearWorkspaceAsRoot()
 
 @Library('jenkins_library') _
 
-import com.blazemeter.buildkit.BuildkitManager
-
 pipeline {
     agent {
         kubernetes {
@@ -55,8 +53,6 @@ pipeline {
         stage('Build Docker Image') {
             steps {
                 script {
-                    BuildkitManager buildkit = new BuildkitManager(this)
-                    
                     // Set image repository and name
                     env.IMAGE_REPO = "us-docker.pkg.dev/verdant-bulwark-278/vs-mcp"
                     env.IMAGE_NAME = "vs-mcp"
@@ -64,40 +60,39 @@ pipeline {
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
                     
-                    // Authenticate and create Docker config for BuildKit
-                    container('jenkins-docker-agent') {
-                        withCredentials([file(credentialsId: 'GoogleCredForJenkins2', variable: 'GCP_KEY')]) {
-                            sh """
-                                # Create Docker config with GCP credentials
-                                cat \${GCP_KEY} | docker login -u _json_key --password-stdin https://us-docker.pkg.dev
-                                
-                                # Copy Docker config to shared workspace for BuildKit access
-                                mkdir -p ${WORKSPACE}/.docker
-                                cp -r ~/.docker/config.json ${WORKSPACE}/.docker/config.json || true
-                            """
-                        }
+                    // Authenticate with GCR/Artifact Registry
+                    dockerLoginGCR('GoogleCredForJenkins2')
+                    sh "gcloud auth configure-docker us-docker.pkg.dev --quiet"
+                    
+                    // Generate tags
+                    def tags = [
+                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        "${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-${sanitisedBranch}"
+                    ]
+                    if (env.BRANCH_NAME == 'master') {
+                        tags.add("${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-master")
+                    } else if (env.BRANCH_NAME.contains('release')) {
+                        tags.add("${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-release")
                     }
                     
-                    // Generate tags with custom repository using getDefaultTags
-                    List tags = buildkit.getDefaultTags(env.IMAGE_NAME, [env.IMAGE_REPO])
+                    // Build Docker image using standard Docker
+                    def tagArgs = tags.collect { "-t ${it}" }.join(' ')
+                    sh """
+                        docker build ${tagArgs} \
+                            --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
+                            --build-arg BRANCH_NAME=${env.BRANCH_NAME} \
+                            --build-arg BUILD_TIME=${currentBuild.startTimeInMillis} \
+                            --build-arg COMMIT_HASH=${env.GIT_COMMIT} \
+                            -f Dockerfile .
+                    """
                     
-                    // Set DOCKER_CONFIG environment variable for BuildKit
-                    def dockerConfigPath = "${WORKSPACE}/.docker"
+                    // Push all tags
+                    tags.each { tag ->
+                        sh "docker push ${tag}"
+                    }
                     
-                    buildkit.build(
-                        dockerFile: "Dockerfile",
-                        buildArgs: [
-                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
-                            "BRANCH_NAME=${env.BRANCH_NAME}",
-                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
-                            "COMMIT_HASH=${env.GIT_COMMIT}",
-                            "DOCKER_CONFIG=${dockerConfigPath}"
-                        ],
-                        tags: tags
-                    )
-                    
-                    // Store buildkit for scans
-                    this.buildkit = buildkit
+                    // Store image details for scans
+                    env.DOCKER_IMAGE = "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
             }
         }
@@ -115,10 +110,9 @@ pipeline {
             when { expression { params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    buildkit.pull("${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}")
                     prismaCloudScanImage(
                         dockerAddress: 'unix:///var/run/docker.sock',
-                        image: "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}",
+                        image: "${env.DOCKER_IMAGE}",
                         logLevel: 'info',
                         resultsFile: 'prisma-cloud-scan-results.json',
                         ignoreImageBuildTime: true
@@ -132,9 +126,11 @@ pipeline {
     post {
         always {
             script {
-                if (binding.hasVariable('buildkit') && buildkit != null) {
-                    buildkit.cleanImages()
-                }
+                // Clean up Docker images
+                sh """
+                    docker rmi ${env.DOCKER_IMAGE} || true
+                    docker system prune -f || true
+                """
             }
             cleanWs()
         }

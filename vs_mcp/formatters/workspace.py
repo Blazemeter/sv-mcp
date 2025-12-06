@@ -7,12 +7,6 @@ from vs_mcp.tools.utils import get_date_time_iso
 def format_workspaces(workspaces: List[Any], params: Optional[dict] = None, detailed: bool = False) -> List[
     Union[WorkspaceDetailed, Workspace]]:
     normalized_workspaces = []
-    locations = format_workspaces_locations(workspaces) if detailed else None
-    if locations:
-        locations_dict = {
-            "private": len(locations[0]["private"]),
-            "public": len(locations[0]["public"])
-        }
     for workspace in workspaces:
 
         workspace_element = {
@@ -28,7 +22,6 @@ def format_workspaces(workspaces: List[Any], params: Optional[dict] = None, deta
                 "owner": workspace["owner"],
                 "allowance": workspace["allowance"],
                 "users_count": workspace["membersCount"],
-                "test_available_locations": locations_dict,
             })
         workspace_object = WorkspaceDetailed(**workspace_element) if detailed else Workspace(**workspace_element)
         normalized_workspaces.append(workspace_object)

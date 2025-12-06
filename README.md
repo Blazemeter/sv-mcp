@@ -67,21 +67,21 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
 
 The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through six main tools:
 
-| Tool                         | Purpose                             | Key Capabilities                                            |
-|------------------------------|-------------------------------------|-------------------------------------------------------------|
+| Tool                         | Purpose                             | Key Capabilities                                      |
+|------------------------------|-------------------------------------|-------------------------------------------------------|
 | **User**                     | Blazemeter User Information         | Get current user details, default account/workspace/project |
-| **Account**                  | Blazemeter Account Management       | List accounts, check AI consent, read account details       |
-| **Workspace**                | Blazemeter Workspace Management     | Manage workspaces, get locations, check billing usage       |
-| **Service**                  | Service Management                  | Create and manage services                                  |
-| **Http Transaction**         | Http Transaction Management         | Create, manage and validate http transactions               |
-| **Messaging Transaction**    | Messaging Transaction Management    | Create, manage and validate messaging transactions          |
-| **Action**                   | Action Management                   | Create, manage and transactions actions                     |
-| **Virtual service**          | Virtual Service Management          | Create, manage, deploy, stop virtual services               |
-| **Virtual service template** | Virtual Service Template Management | Create, manage, apply to the virtual service                |
-| **Asset**                    | Asset Management                    | Upload assets                                               |
-| **Configuration**            | Configuration Management            | Create, manage configurations                               |
-| **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                            |
-| **Tracking**                 | Tracking Management                 | Fetch tracking status for virtual service actions           |
+| **Account**                  | Blazemeter Account Management       | List accounts, check AI consent, read account details |
+| **Workspace**                | Blazemeter Workspace Management     | Manage workspaces, check billing usage       |
+| **Service**                  | Service Management                  | Create and manage services                            |
+| **Http Transaction**         | Http Transaction Management         | Create, manage and validate http transactions         |
+| **Messaging Transaction**    | Messaging Transaction Management    | Create, manage and validate messaging transactions    |
+| **Action**                   | Action Management                   | Create, manage and transactions actions               |
+| **Virtual service**          | Virtual Service Management          | Create, manage, deploy, stop virtual services         |
+| **Virtual service template** | Virtual Service Template Management | Create, manage, apply to the virtual service          |
+| **Asset**                    | Asset Management                    | Upload assets                                         |
+| **Configuration**            | Configuration Management            | Create, manage configurations                         |
+| **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                      |
+| **Tracking**                 | Tracking Management                 | Fetch tracking status for virtual service actions     |
 ---
 
 ### **User Management**
@@ -110,7 +110,6 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 |--------|-------------|
 | Get workspace details | Workspace information and billing details |
 | List workspaces | All workspaces in an account |
-| Get locations | Available test locations for different purposes |
 
 ---
 

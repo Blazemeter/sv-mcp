@@ -45,4 +45,4 @@ RUN groupadd -r bzm-mcp && useradd -r -g bzm-mcp bzm-mcp
 USER bzm-mcp
 
 ENTRYPOINT ["bzm-mcp"]
-CMD ["--mcp"]
+CMD []

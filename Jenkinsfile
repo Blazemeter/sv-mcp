@@ -117,6 +117,15 @@ pipeline {
                         resultsFile: 'prisma-cloud-scan-results.json',
                         ignoreImageBuildTime: true
                     )
+                    
+                    sh '''
+                        if [ -f prisma-cloud-scan-results.json ]; then
+                            chmod 644 prisma-cloud-scan-results.json
+                            ls -lah prisma-cloud-scan-results.json
+                        else
+                            echo "Results file not found"
+                        fi
+                    '''
                     prismaCloudPublish(resultsFilePattern: 'prisma-cloud-scan-results.json')
                 }
             }
@@ -131,6 +140,18 @@ pipeline {
                     docker rmi ${env.DOCKER_IMAGE} || true
                     docker system prune -f || true
                 """
+                if (params.PERFORM_PRISMA_SCAN && fileExists('prisma-cloud-scan-results.json')) {
+                    try {
+                        // Wait a moment to ensure file is fully written
+                        sleep(time: 2, unit: 'SECONDS')
+                        archiveArtifacts artifacts: 'prisma-cloud-scan-results.json', allowEmptyArchive: true
+                        echo "Prisma Cloud scan results archived successfully"
+                    } catch (Exception e) {
+                        echo "Failed to archive Prisma scan results: ${e.message}"
+                    }
+                } else {
+                    echo "Prisma Cloud scan not performed or results file not found"
+                }
             }
             cleanWs()
         }

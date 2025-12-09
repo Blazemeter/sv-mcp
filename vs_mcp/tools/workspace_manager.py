@@ -7,7 +7,7 @@ from pydantic import Field
 
 from vs_mcp.config.blazemeter import WORKSPACES_ENDPOINT, TOOLS_PREFIX
 from vs_mcp.config.token import BzmToken
-from vs_mcp.formatters.workspace import format_workspaces, format_workspaces_detailed, format_workspaces_locations
+from vs_mcp.formatters.workspace import format_workspaces, format_workspaces_detailed
 from vs_mcp.models.result import BaseResult
 from vs_mcp.tools import bridge
 from vs_mcp.tools.utils import bzm_api_request
@@ -64,26 +64,6 @@ class WorkspaceManager:
             params=parameters
         )
 
-    async def read_locations(self, workspace_id: int, purpose: str = "load") -> BaseResult:
-
-        locations_result = await bzm_api_request(
-            self.token,
-            "GET",
-            f"{WORKSPACES_ENDPOINT}/{workspace_id}",
-            result_formatter=format_workspaces_locations,
-            result_formatter_params={"purpose": purpose}
-        )
-        if locations_result.error:
-            return locations_result
-        else:
-            # Check if it's valid or allowed
-            account_result = await bridge.read_account(self.token, self.ctx,
-                                                       locations_result.result[0]["account_id"])
-            if account_result.error:
-                return account_result
-            else:
-                return locations_result
-
 
 def register(mcp, token: Optional[BzmToken]):
     @mcp.tool(
@@ -99,12 +79,6 @@ def register(mcp, token: Optional[BzmToken]):
                         account_id (int): The id of the account to list the workspaces from
                         limit (int, default=10, valid=[1 to 50]): The number of workspaces to list.
                         offset (int, default=0): Number of workspaces to skip.
-                - read_locations: get the location list for a given workspace ID.
-                    args(dict): Dictionary with the following required parameters:
-                        workspace_id (int): The id of the workspace.
-                        purpose (str, default="load", valid=["load", "functional", "grid", "mock"]): The purpose filter.
-                Hints:
-                - For available locations and available billing usage use the 'read' action for a particular workspace.
                 """
     )
     async def workspace(
@@ -121,8 +95,6 @@ def register(mcp, token: Optional[BzmToken]):
                 case "list":
                     return await workspace_manager.list(args["account_id"], args.get("limit", 50),
                                                         args.get("offset", 0))
-                case "read_locations":
-                    return await workspace_manager.read_locations(args["workspace_id"], args.get("purpose", "load"))
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in workspace manager tool"

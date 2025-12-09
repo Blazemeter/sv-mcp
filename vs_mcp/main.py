@@ -51,10 +51,10 @@ def get_token():
     return token
 
 
-def run(log_level: str = "DEBUG", mode: str = "mcp"):
+def run(log_level: str = "DEBUG", mode: str = "stdio"):
     token = get_token()
     instructions = """
-    # BlazeMeter MCP Server
+    # BlazeMeter Virtual Services MCP Server
     A comprehensive integration tool that provides AI assistants with full programmatic access to BlazeMeter's 
     cloud-based performance testing platform.
     Enables automated management of complete load testing workflows from creation to execution and reporting.
@@ -77,7 +77,7 @@ def run(log_level: str = "DEBUG", mode: str = "mcp"):
             Use the user’s activeWorkspaceId from from user object for workspace_id in all api calls, where it is required
             unless user requested a specific workspace.
     """
-    if mode == "mcp":
+    if mode == "stdio":
         mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")
         register_tools(mcp, token)
         mcp.run(transport="stdio")
@@ -101,79 +101,56 @@ if __name__ == "__main__":
         version=f"%(prog)s {__version__}"
     )
 
-    parser.add_argument(
-        "--mcp",
-        action="store_true",
-        help="Execute MCP Server in STDIO mode"
-    )
-
-    parser.add_argument(
-        "--http",
-        action="store_true",
-        help="Execute MCP Server In HTTP mode"
-    )
-
-    parser.add_argument(
-        "--stateless",
-        action="store_true",
-        help="Execute MCP Server In HTTP stateless mode"
-    )
+    parser.add_argument("--mcp", action="store_true", help="Execute MCP Server in STDIO mode")
+    parser.add_argument("--http", action="store_true", help="Execute MCP Server in HTTP mode")
+    parser.add_argument("--stateless", action="store_true", help="Execute MCP Server in HTTP stateless mode")
 
     parser.add_argument(
         "--log-level",
-        default="DEBUG",  # By default, only critical errors
+        default="DEBUG",
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
-        help="Logging level (default: CRITICAL = critical errors only)"
+        help="Logging level"
     )
 
     args = parser.parse_args()
     init_logging(args.log_level)
 
+    # ---------------------------------------------------------
+    # Determine effective mode:
+    # 1. CLI flags override everything
+    # 2. MCP_MODE env next
+    # 3. Default = "stdio"
+    # ---------------------------------------------------------
+    cli_mode = None
     if args.mcp:
-        # Disable all logging for MCP stdio mode
-        logging.disable(logging.CRITICAL)
-        run(log_level="CRITICAL", mode="mcp")
+        cli_mode = "stdio"
     elif args.http:
-        run(log_level=args.log_level.upper(), mode="http")
+        cli_mode = "http"
     elif args.stateless:
-        run(log_level=args.log_level.upper(), mode="http-stateless")
+        cli_mode = "http-stateless"
+
+    env_mode = os.getenv("MCP_MODE", "").strip().lower()
+
+    if cli_mode:
+        effective_mode = cli_mode
+    elif env_mode in ("stdio", "http", "http-stateless"):
+        effective_mode = env_mode
     else:
-        logo_ascii = rf"""
-          ____  _                __  __      _            
-         | __ )| | __ _ _______ |  \/  | ___| |_ ___ _ __ 
-         |  _ \| |/ _` |_  / _ \| .  . |/ _ \ __/ _ \ '__|
-         | |_) | | (_| |/ /  __/| |\/| |  __/ ||  __/ |   
-         |____/|_|\__,_/___\___||_|  |_|\___|\__\___|_|   
+        effective_mode = "stdio"
 
-         BlazeMeter Virtual Services MCP Server v{__version__}
-        """
-        print(logo_ascii)
+    # ---------------------------------------------------------
+    # Launch server
+    # ---------------------------------------------------------
+    if effective_mode == "stdio":
+        logging.disable(logging.CRITICAL)
+        run(log_level="CRITICAL", mode="stdio")
 
-        config_dict = {
-            "BlazeMeter MCP": {
-                "command": f"{__executable__}",
-                "args": ["--mcp"],
-            }
-        }
+    elif effective_mode == "http":
+        run(log_level=args.log_level.upper(), mode="http")
 
-        print(" MCP Server Configuration:\n")
-        print(" In your tool with MCP server support, locate the MCP server configuration file")
-        print(" and add the following server to the server list.\n")
+    elif effective_mode == "http-stateless":
+        run(log_level=args.log_level.upper(), mode="http-stateless")
 
-        json_str = json.dumps(config_dict, ensure_ascii=False, indent=4)
-        print("\n".join(json_str.split("\n")[1:-1]) + "\n")
+    else:
+        raise ValueError(f"Invalid MCP_MODE: {effective_mode}")
 
-        if not get_token():
-            print(" [X] BlazeMeter API Key not configured.")
-            print(" ")
-            print(" Copy the BlazeMeter API Key file (api-key.json) to the same location of this executable.")
-            print(" ")
-            print(" How to obtain the api-key.json file:")
-            print(" https://help.blazemeter.com/docs/guide/api-blazemeter-api-keys.html")
-        else:
-            print(" [OK] BlazeMeter API Key configured correctly.")
-        print(" ")
-        print(" There are configuration alternatives, if you want to know more:")
-        print(" https://github.com/Blazemeter/bzm-mcp/")
-        print(" ")
-        input("Press Enter to exit...")

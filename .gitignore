@@ -2,9 +2,16 @@
 __pycache__/
 *.py[oc]
 build/
-dist/
+# dist/ - Keep this for binary artifacts
 wheels/
 *.egg-info
 
 # Virtual environments
 .venv
+
+### Intellij+all Patch ###
+# Ignores the whole .idea folder and all .iml files
+# See https://github.com/joeblau/gitignore.io/issues/186 and https://github.com/joeblau/gitignore.io/issues/360
+
+.idea/
+version_info.txt

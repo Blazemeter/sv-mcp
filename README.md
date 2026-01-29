@@ -32,37 +32,6 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
 > [!IMPORTANT]
 > When downloading your API keys from BlazeMeter, save the `api-keys.json` file in the same folder where you'll place the MCP binary.
 
-### **Quick Setup with CLI Tool** ⚡
-
-<details>
-<summary><strong>Manual Client Configuration (Binary Installation)</strong></summary>
-
-1. **Build the binary** for your operating system, by running vs_mcp/build.py script
-2. **Configure your MCP client** with the following settings:
-
-```json
-{
-  "mcpServers": {
-    "VS MCP": {
-          "disabled": false,
-          "timeout": 60,
-          "type": "stdio",
-          "command": "path to the binary",
-          "args": [
-            "--mcp"
-          ],
-          "env": {
-            "API_KEY_PATH": "path to the api-keys.json file"
-          }
-        }
-  }
-}
-```
-
-</details>
-
----
-
 ## Available Tools
 
 The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through six main tools:
@@ -264,45 +233,11 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 The MCP server supports enabling or disabling specific tools at startup using the environment variable MCP_ENABLED_TOOLS.
 If the environment variable is not set or is an empty string, all available tools are automatically enabled.
 
-
 To enable only certain tools, set the environment variable to a comma-separated list of tool names.
 
 Example:
 MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_service"
 
-
-### **MCP Client Configuration for Local testing using HTTP**
-1. Run main.py with --http flag
-2. Connect to the MCP server using the following URL:
-```http://localhost:8000/mcp ```
-3. Example request
-``` json
-{
-  "jsonrpc": "2.0",
-  "id": "2",
-  "method": "tools/call",
-  "params": {
-    "name": "virtual_services_virtual_service",
-    "arguments": {
-      "action": "create",
-      "args": {
-        "name": "test-ms1114",
-				"workspace_id": 1622,
-			    "serviceId": 4,
-				"type": "TRANSACTIONAL",
-				"harborId": "<harbor_id>",
-				"shipId": "<ship_id>",
-				"noMatchingRequestPreference": "return404",
-				"endpointPreference": "HTTPS",
-				"replicas": 1,
-				"mockServiceTransactions": [],
-				"httpRunnerEnabled": true,
-				"endpoints": []
-      }
-    }
-  }
-}
-```
 
 ### **MCP Client Configuration for Local testing using VS Code or Claude Desktop**
    1. Run main.py with --mcp flag
@@ -358,7 +293,7 @@ MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_s
         "SOURCE_WORKING_DIRECTORY=/tmp",
         "-v",
         "/host/path/to/your/test/files:/tmp",
-        "ghcr.io/blazemeter/bzm-mcp:latest"
+        "us-docker.pkg.dev/verdant-bulwark-278/sv-mcp/sv-mcp:latest"
       ]
     }
   }

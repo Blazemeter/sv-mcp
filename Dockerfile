@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy pyproject.toml and source code
 COPY pyproject.toml .
 COPY uv.lock .
-COPY vs_mcp/ ./vs_mcp
+COPY sv_mcp/ ./vs_mcp
 
 # Install your project and its dependencies
 RUN pip install --no-cache-dir . \

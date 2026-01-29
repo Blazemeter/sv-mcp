@@ -1,7 +1,7 @@
 [project]
-name = "bzm-mcp"
+name = "sv-mcp"
 version = "1.0"
-description = "BlazeMeter MCP"
+description = "Service Virtualization MCP"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"
 dependencies = [
@@ -14,6 +14,6 @@ dependencies = [
 ]
 
 [project.scripts]
-bzm-mcp = "main:run"
+sv-mcp = "main:run"
 [tool.setuptools]
-packages = { find = { where = ["vs_mcp"] } }
+packages = { find = { where = ["sv_mcp"] } }

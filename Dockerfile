@@ -16,7 +16,7 @@ RUN apt-get update && apt-get install -y --no-install-recommends \
 # Copy pyproject.toml and source code
 COPY pyproject.toml .
 COPY uv.lock .
-COPY sv_mcp/ ./vs_mcp
+COPY sv_mcp/ ./sv_mcp
 
 # Install your project and its dependencies
 RUN pip install --no-cache-dir . \
@@ -25,7 +25,7 @@ RUN pip install --no-cache-dir . \
 RUN pdm install --prod --no-self
 
 # Run build.py
-WORKDIR /app/vs_mcp
+WORKDIR /app/sv_mcp
 RUN python build.py
 # ----------------------------
 # Stage 2: Final
@@ -37,7 +37,7 @@ ENV MCP_DOCKER=true
 WORKDIR /app
 
 # Copy the statically named binary
-COPY --from=builder /app/vs_mcp/dist/bzm-mcp-linux /usr/local/bin/bzm-mcp
+COPY --from=builder /app/sv_mcp/dist/bzm-mcp-linux /usr/local/bin/bzm-mcp
 RUN chmod +x /usr/local/bin/bzm-mcp
 
 # Run as non-root user

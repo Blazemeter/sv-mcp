@@ -59,7 +59,7 @@ def build():
     shutil.rmtree("build", ignore_errors=True)
     shutil.rmtree("dist", ignore_errors=True)
 
-    # **Important**: point PyInstaller to project root, not vs_mcp
+    # **Important**: point PyInstaller to project root, not sv_mcp
     project_root = Path(__file__).parent.parent
 
     PyInstaller.__main__.run([

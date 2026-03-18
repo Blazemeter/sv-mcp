@@ -3,11 +3,11 @@ from typing import Optional, List
 
 from mcp.server.fastmcp import Context
 
-from vs_mcp.config.blazemeter import VS_ENDPOINT, WORKSPACES_ENDPOINT
-from vs_mcp.config.token import BzmToken
-from vs_mcp.formatters.virtual_service import format_virtual_services, format_virtual_services_action
-from vs_mcp.models.result import BaseResult
-from vs_mcp.tools.utils import vs_api_request
+from sv_mcp.config.blazemeter import VS_ENDPOINT, WORKSPACES_ENDPOINT
+from sv_mcp.config.token import BzmToken
+from sv_mcp.formatters.virtual_service import format_virtual_services, format_virtual_services_action
+from sv_mcp.models.result import BaseResult
+from sv_mcp.tools.utils import vs_api_request
 
 
 class BaseVirtualServiceManager:

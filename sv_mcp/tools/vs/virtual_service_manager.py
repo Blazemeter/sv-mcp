@@ -4,14 +4,14 @@ from typing import Optional, Annotated, Dict, Any, List
 import httpx
 from mcp.server.fastmcp import Context
 
-from vs_mcp.config.blazemeter import VS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX
-from vs_mcp.config.token import BzmToken
-from vs_mcp.formatters.virtual_service import format_virtual_services, format_virtual_services_action
-from vs_mcp.models.result import BaseResult
-from vs_mcp.models.vs.mock_service_transaction import MockServiceTransaction
-from vs_mcp.models.vs.virtual_service import VirtualService, ActionResult
-from vs_mcp.tools.utils import vs_api_request
-from vs_mcp.tools.vs.base_virtual_service_manager import BaseVirtualServiceManager
+from sv_mcp.config.blazemeter import VS_ENDPOINT, WORKSPACES_ENDPOINT, VS_TOOLS_PREFIX
+from sv_mcp.config.token import BzmToken
+from sv_mcp.formatters.virtual_service import format_virtual_services, format_virtual_services_action
+from sv_mcp.models.result import BaseResult
+from sv_mcp.models.vs.mock_service_transaction import MockServiceTransaction
+from sv_mcp.models.vs.virtual_service import VirtualService, ActionResult
+from sv_mcp.tools.utils import vs_api_request
+from sv_mcp.tools.vs.base_virtual_service_manager import BaseVirtualServiceManager
 
 
 class VirtualServiceManager(BaseVirtualServiceManager):

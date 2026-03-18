@@ -28,8 +28,8 @@ class VirtualService(BaseModel):
             "while messaging virtual services are used for simulating message-based interactions."
         )
     )
-    harborId: str = Field(..., description="Location harbor identifier")
-    shipId: str = Field(..., description="Location ship identifier")
+    harborId: Optional[str] = Field(None, description="Location harbor identifier")
+    shipId: Optional[str] = Field(None, description="Location ship identifier")
     configurationId: Optional[int] = Field(None, description="Configuration identifier")
     noMatchingRequestPreference: str = Field(
         ...,

@@ -251,7 +251,7 @@ MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_s
       "type": "stdio",
       "command": "path to your python interpreter /.../venv/bin/python",
       "args": [
-        "path to project main.py /.../vs_mcp/main.py",
+        "path to project main.py /.../sv_mcp/main.py",
         "--mcp"
       ],
       "env": {

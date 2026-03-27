@@ -53,7 +53,7 @@ VSVersionInfo(
 
 def build():
     entry_point = Path(__file__).parent / "main.py"
-    name = "bzm-mcp-linux"
+    name = os.environ.get("BINARY_NAME", "sv-mcp")
 
     # Clean old builds
     shutil.rmtree("build", ignore_errors=True)

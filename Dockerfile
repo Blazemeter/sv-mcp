@@ -26,7 +26,7 @@ RUN pdm install --prod --no-self
 
 # Run build.py
 WORKDIR /app/sv_mcp
-RUN python build.py
+RUN BINARY_NAME=sv-mcp-linux python build.py
 # ----------------------------
 # Stage 2: Final
 # ----------------------------
@@ -37,12 +37,12 @@ ENV MCP_DOCKER=true
 WORKDIR /app
 
 # Copy the statically named binary
-COPY --from=builder /app/sv_mcp/dist/bzm-mcp-linux /usr/local/bin/bzm-mcp
-RUN chmod +x /usr/local/bin/bzm-mcp
+COPY --from=builder /app/sv_mcp/dist/sv-mcp-linux /usr/local/bin/sv-mcp
+RUN chmod +x /usr/local/bin/sv-mcp
 
 # Run as non-root user
-RUN groupadd -r bzm-mcp && useradd -r -g bzm-mcp bzm-mcp
-USER bzm-mcp
+RUN groupadd -r sv-mcp && useradd -r -g sv-mcp sv-mcp
+USER sv-mcp
 
-ENTRYPOINT ["bzm-mcp"]
+ENTRYPOINT ["sv-mcp"]
 CMD []

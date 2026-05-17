@@ -1,4 +1,5 @@
-from typing import (List, Any, Optional)
+import base64
+from typing import List, Any, Optional
 
 from sv_mcp.models.vs.http_header import HttpHeader
 from sv_mcp.models.vs.matching_log_entry import MatchingLogEntry
@@ -7,18 +8,24 @@ from sv_mcp.models.vs.sandbox_response import SandboxResponse
 
 
 def format_sandbox_test_request(responses: List[Any], params: Optional[dict] = None) -> List[SandboxResponse]:
-    formatted_sandbox_responses = []
+    formatted = []
     for response in responses:
-        formatted_sandbox_responses.append(
+        raw_body = response.get("body")
+        try:
+            body = base64.b64decode(raw_body).decode("utf-8") if raw_body else None
+        except (ValueError, UnicodeDecodeError):
+            body = raw_body
+
+        formatted.append(
             SandboxResponse(
                 status=response.get("status"),
                 statusMessage=response.get("statusMessage"),
                 headers=[HttpHeader(**d) for d in response.get("headers") or []],
-                body=response.get("body"),
+                body=body,
                 matchingLog=[MatchingLogEntry(**d) for d in response.get("matchingLog") or []],
             )
         )
-    return formatted_sandbox_responses
+    return formatted
 
 
 def format_sandbox(responses: List[Any], params: Optional[dict] = None) -> List[Sandbox]:

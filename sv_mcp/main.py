@@ -72,9 +72,15 @@ def run(log_level: str = "DEBUG", mode: str = "stdio"):
             transactions: Transactions belong to a particular service.
             actions: Actions belong to a particular service.
             virtual services: Virtual Services belong to a particular service.
-        Important: 
+        Important:
             Use the user’s activeWorkspaceId from from user object for workspace_id in all api calls, where it is required
             unless user requested a specific workspace.
+        HTTP transaction validation:
+            - When creating HTTP transactions that contain Handlebars templates, always use
+              create_and_test (not create). A transaction is only complete when matched=true.
+            - If create_and_test returns matched=false, read mismatch_reasons in the result,
+              fix the DSL using the update action, re-init with virtual_services_sandbox init,
+              then re-test with virtual_services_sandbox test_request.
     """
     if mode == "stdio":
         mcp = FastMCP("blazemeter-mcp", instructions=instructions, log_level="DEBUG")

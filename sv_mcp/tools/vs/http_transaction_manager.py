@@ -14,7 +14,10 @@ from sv_mcp.formatters.validations import format_validation_request
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.generic_dsl import GenericDsl
 from sv_mcp.models.vs.http_transaction import HttpTransaction
+from sv_mcp.models.vs.matching_log_entry import MatchingLogEntry
+from sv_mcp.models.vs.sandbox_response import SandboxResponse
 from sv_mcp.tools.utils import vs_api_request
+from sv_mcp.tools.vs.sandbox_manager import SandboxManager
 
 
 class HttpTransactionManager:
@@ -164,6 +167,65 @@ class HttpTransactionManager:
             params=parameters
         )
 
+    async def create_and_test(self, transaction_name: str, workspace_id: int, service_id: int,
+                              dsl, delay, test_cases: list) -> BaseResult:
+        create_result = await self.create(transaction_name, workspace_id, service_id, dsl, delay)
+        if create_result.error:
+            return create_result
+
+        transaction_id = create_result.result[0].id if create_result.result else None
+        if not transaction_id:
+            return BaseResult(error="Transaction was created but ID could not be retrieved")
+
+        sandbox_manager = SandboxManager(self.token, self.ctx)
+        init_result = await sandbox_manager.init(workspace_id, transaction_id)
+        if init_result.error:
+            return BaseResult(
+                error=init_result.error,
+                info=[f"transaction_id={transaction_id}", "Sandbox init failed — transaction was created"]
+            )
+
+        test_results = []
+        passed = 0
+        for test_case in test_cases:
+            test_result = await sandbox_manager.test_request(test_case, workspace_id)
+            if test_result.error:
+                test_results.append(SandboxResponse(
+                    status=0, statusMessage="Error",
+                    matchingLog=[MatchingLogEntry(t=0, m=test_result.error)]
+                ))
+            else:
+                if test_result.result:
+                    response = test_result.result[0]
+                    test_results.append(response)
+                    if response.matched:
+                        passed += 1
+                else:
+                    test_results.append(SandboxResponse(
+                        status=0, statusMessage="Empty response",
+                        matchingLog=[MatchingLogEntry(t=0, m="test_request returned empty result")]
+                    ))
+
+        total = len(test_cases)
+        failed = total - passed
+        info = [f"transaction_id={transaction_id}", f"tests_passed={passed}", f"tests_total={total}"]
+
+        if failed == 0:
+            return BaseResult(result=test_results, info=info)
+        elif passed == 0:
+            return BaseResult(
+                result=test_results,
+                error=f"All {total} test case(s) failed. Check mismatch_reasons in each result "
+                      f"and fix the DSL using the update action.",
+                info=info
+            )
+        else:
+            return BaseResult(
+                result=test_results,
+                warning=[f"{failed} of {total} test case(s) failed. Check mismatch_reasons in failing results."],
+                info=info
+            )
+
     def to_base64(input_str: str) -> str:
         encoded_bytes = base64.b64encode(input_str.encode('utf-8'))
         encoded_str = encoded_bytes.decode('utf-8')
@@ -178,7 +240,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         Use this when a user needs to create or select a HTTP transaction.
         DSL type field is mandatory and must be set to "HTTP".
       1. General Rules:
-            - If redirect url is required in transaction creation or update, provide it as a redirectUrl field in dsl, 
+            - If redirect url is required in transaction creation or update, provide it as a redirectUrl field in dsl,
             not as a matcher.
             - Assign intermediate values with {{#assign "varName"}}{{value}}{{/assign}}.
             - Keep JSON objects outside helper calls; helpers should only produce values.
@@ -186,6 +248,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             - Each helper must have exactly one opening and one closing brace; do not add extra # or braces.
             - Use handlebars helpers supported by wiremock, specified in https://wiremock.org/docs/response-templating/
             - Use validate_template and convert_template actions to validate and convert templates before using them in transaction definition.
+            - IMPORTANT: When a transaction DSL contains Handlebars templates, always use
+              create_and_test instead of create. A transaction is only complete when sandbox
+              returns matched=true for all test cases. If matched=false, read mismatch_reasons,
+              fix the DSL with update, re-init with virtual_services_sandbox init, then re-test with virtual_services_sandbox test_request.
         Actions:
         - read: Read an HTTP Transaction. Get the information of a transaction.
             args(dict): Dictionary with the following required parameters:
@@ -205,6 +271,30 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args:
                 template (str): Mandatory. The handlebars template to validate.
                 encode (bool, default=True): Whether to encode the converted template to Base64.
+        - create_and_test: Create a new HTTP transaction and immediately validate it in sandbox.
+            Use this instead of `create` when the DSL contains Handlebars templates.
+            A transaction is only complete when sandbox returns matched=true for all test cases.
+            On all-fail: error contains the failure summary; transaction still exists — use update to fix the DSL,
+            then re-init with virtual_services_sandbox init and re-test with virtual_services_sandbox test_request.
+            On partial fail: warning lists failures; transaction still exists.
+            args:
+                name (str): Mandatory. The name of the transaction.
+                serviceId (int): Mandatory. The id of the service.
+                dsl (GenericDsl): Mandatory. The DSL definition.
+                workspace_id (int): Mandatory. The id of the workspace.
+                delay (int): Optional. Response delay in milliseconds.
+                test_cases (list[SandboxRequest]): Mandatory. At least one test request.
+                    Each entry has: method (str), path (str), name (str),
+                    queryParameters (list, optional), headers (list, optional), content (str base64, optional).
+            Returns:
+                info: ["transaction_id=<id>", "tests_passed=<n>", "tests_total=<n>"]
+                result: List of SandboxResponse per test case.
+                result[].matched: True if the test request matched the transaction.
+                result[].body: Decoded response body (plain text or JSON).
+                result[].mismatch_reasons: Why the request did not match (when matched=False).
+                error: All test cases failed, or creation/sandbox init failed.
+                    On sandbox init failure, info still contains transaction_id so the transaction can be recovered.
+                warning: Some (not all) test cases failed.
         - create: Create a new HTTP transaction.
             Important: before using template in transaction definition validate it and 
             convert it first using validate_template and convert_template actions.
@@ -275,6 +365,15 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await transaction_manager.validate_template(args["template"])
                 case "convert_template":
                     return await transaction_manager.convert_template(args["template"])
+                case "create_and_test":
+                    return await transaction_manager.create_and_test(
+                        args["name"],
+                        args["workspace_id"],
+                        args["serviceId"],
+                        args["dsl"],
+                        args.get("delay", None),
+                        args["test_cases"],
+                    )
                 case "assign_keystore":
                     return await transaction_manager.assign_asset(
                         args["id"],

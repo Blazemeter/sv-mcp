@@ -48,9 +48,12 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_sandbox",
         description="""
-        Testing HTTP transactions in sandbox. 
-        Use this for HTTP transaction verification.
+        Testing HTTP transactions in sandbox.
+        Use this for HTTP transaction verification, or to re-test an existing transaction after update.
         MESSAGING transactions are not supported in sandbox.
+        Response fields: matched=true means the request was matched by the configured transaction.
+        matched=false means no transaction matched — read mismatch_reasons to understand which
+        matchers failed and what to fix in the DSL.
         Actions:
         - init: Places transaction into sandbox.
             args(dict): Dictionary with the following required parameters:

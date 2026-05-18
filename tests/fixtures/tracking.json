@@ -1,0 +1,26 @@
+{
+  "master": [
+    {
+      "trackingId": "uuid-master-001",
+      "status": "FINISHED",
+      "errors": [],
+      "warnings": [],
+      "data": {
+        "dataType": "MASTER_TRACKING",
+        "serviceMockTrackingDtos": []
+      }
+    }
+  ],
+  "asset": [
+    {
+      "trackingId": "uuid-asset-002",
+      "status": "FINISHED",
+      "errors": [],
+      "warnings": [],
+      "data": {
+        "dataType": "FILE_UPLOAD",
+        "assetId": 777
+      }
+    }
+  ]
+}

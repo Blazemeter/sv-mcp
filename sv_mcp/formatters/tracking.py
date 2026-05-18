@@ -12,7 +12,7 @@ def format_trackings(trackings: List[Any], params: Optional[dict] = None) -> Lis
                 status=tracking.get("status"),
                 errors=tracking.get("errors"),
                 warnings=tracking.get("warnings"),
-                data=MasterTrackingData(**tracking.get("data")),
+                data=MasterTrackingData(**(tracking.get("data") or {})),
             )
         )
     return formatted_trackings
@@ -27,7 +27,7 @@ def format_asset_trackings(trackings: List[Any], params: Optional[dict] = None) 
                 status=tracking.get("status"),
                 errors=tracking.get("errors"),
                 warnings=tracking.get("warnings"),
-                data=FileUploadTrackingData(**tracking.get("data")),
+                data=FileUploadTrackingData(**(tracking.get("data") or {})),
             )
         )
     return formatted_trackings

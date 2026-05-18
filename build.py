@@ -105,11 +105,10 @@ def get_icon_file(system: str) -> str:
 
 def run_pyinstaller(name: str, icon: str):
     PyInstaller.__main__.run([
-        'main.py',
+        'sv_mcp/main.py',
         '--onefile',
         '--version-file=version_info.txt',
         f'--add-data=pyproject.toml{sep}.',
-        f'--add-data=resources{sep}resources',
         f'--name={name}',
         f'--icon={icon}',
         '--clean',

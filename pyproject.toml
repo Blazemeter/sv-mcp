@@ -30,5 +30,7 @@ packages = { find = { where = ["sv_mcp"] } }
 
 [dependency-groups]
 dev = [
+    "pytest>=8.0",
+    "pytest-asyncio>=0.23",
     "pytest-cov>=7.1.0",
 ]

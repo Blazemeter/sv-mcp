@@ -1,17 +1,19 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
 class Sandbox(BaseModel):
-    userId: int = Field(
-        ...,
+    userId: Optional[int] = Field(
+        None,
         description="User id"
     )
-    serviceId: int = Field(
-        ...,
+    serviceId: Optional[int] = Field(
+        None,
         description="Service id"
     )
-    transactionId: int = Field(
-        ...,
+    transactionId: Optional[int] = Field(
+        None,
         description="Transaction id"
     )
 

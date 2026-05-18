@@ -46,7 +46,7 @@ def format_executions_status(statuses: List[Any], params: Optional[dict] = None)
     formatted_statuses = []
     for status_element in statuses:
         execution_step = status_element.get("executionStep", "Unknown")
-        status = status_element.get("statuses")
+        status = status_element.get("statuses") or {}
         formatted_statuses.append(
             TestExecutionStatus(
                 progress_percent=status.get("ended", 0),

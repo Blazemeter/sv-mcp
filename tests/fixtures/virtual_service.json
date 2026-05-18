@@ -1,0 +1,25 @@
+[
+  {
+    "id": 55001,
+    "name": "My Virtual Service",
+    "status": "RUNNING",
+    "serviceId": 341611,
+    "type": "TRANSACTIONAL",
+    "harborId": "harbor-us-east",
+    "shipId": "ship-001",
+    "configurationId": null,
+    "noMatchingRequestPreference": "return404",
+    "endpointPreference": "HTTP",
+    "replicas": 1,
+    "mockServiceTransactions": [
+      {"txnId": 6485927, "priority": 10, "destinations": []}
+    ],
+    "endpoints": [
+      {"endpoint": "http://vs.blazemeter.com:8080"}
+    ],
+    "httpRunnerEnabled": true,
+    "proxy": null,
+    "brokerConfig": null,
+    "assets": []
+  }
+]

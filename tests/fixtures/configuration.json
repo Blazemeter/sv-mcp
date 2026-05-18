@@ -1,0 +1,11 @@
+[
+  {
+    "id": 101,
+    "name": "AWS Config",
+    "description": "AWS S3 configuration",
+    "configurationMap": {
+      "bucket_name": {"value": "mybucket", "type": "STRING"},
+      "region": {"value": "us-east-1", "type": "STRING"}
+    }
+  }
+]

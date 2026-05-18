@@ -26,6 +26,7 @@ def test_format_virtual_services_null_broker_config_no_crash():
 def test_format_virtual_services_mock_transactions_parsed():
     result = format_virtual_services(load_fixture("virtual_service"))
     txns = result[0].mockServiceTransactions
+    assert txns is not None
     assert len(txns) == 1
     assert txns[0].txnId == 6485927
 
@@ -33,6 +34,7 @@ def test_format_virtual_services_mock_transactions_parsed():
 def test_format_virtual_services_endpoints_parsed():
     result = format_virtual_services(load_fixture("virtual_service"))
     endpoints = result[0].endpoints
+    assert endpoints is not None
     assert len(endpoints) == 1
     assert endpoints[0].endpoint == "http://vs.blazemeter.com:8080"
 

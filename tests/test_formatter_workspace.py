@@ -1,4 +1,3 @@
-import pytest
 from conftest import load_fixture
 from sv_mcp.formatters.workspace import (
     format_workspaces,

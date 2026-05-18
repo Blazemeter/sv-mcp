@@ -24,5 +24,11 @@ dev = [
 
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
+pythonpath = ["."]
 [tool.setuptools]
 packages = { find = { where = ["sv_mcp"] } }
+
+[dependency-groups]
+dev = [
+    "pytest-cov>=7.1.0",
+]

@@ -1,3 +1,5 @@
+from typing import Optional
+
 from pydantic import BaseModel, Field
 
 
@@ -14,4 +16,4 @@ class User(BaseModel):
     time_zone: int = Field(description="Time zone of the user")
     enabled: bool = Field(description="If the user is enabled")
     default_project_id: int = Field(description="Default project id of the user")
-    active_workspace_id: int = Field(description="Active workspace id of the user")
+    active_workspace_id: Optional[int] = Field(None, description="Active workspace id of the user")

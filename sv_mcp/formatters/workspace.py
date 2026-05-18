@@ -8,20 +8,19 @@ def format_workspaces(workspaces: List[Any], params: Optional[dict] = None, deta
     Union[WorkspaceDetailed, Workspace]]:
     normalized_workspaces = []
     for workspace in workspaces:
-
         workspace_element = {
-            "workspace_id": workspace["id"],
-            "workspace_name": workspace["name"],
-            "account_id": workspace["accountId"],
-            "created": get_date_time_iso(workspace["created"]),
-            "updated": get_date_time_iso(workspace["updated"]),
-            "enabled": workspace["enabled"],
+            "workspace_id": workspace.get("id"),
+            "workspace_name": workspace.get("name"),
+            "account_id": workspace.get("accountId"),
+            "created": get_date_time_iso(workspace.get("created")),
+            "updated": get_date_time_iso(workspace.get("updated")),
+            "enabled": workspace.get("enabled"),
         }
         if detailed:
             workspace_element.update({
-                "owner": workspace["owner"],
-                "allowance": workspace["allowance"],
-                "users_count": workspace["membersCount"],
+                "owner": workspace.get("owner"),
+                "allowance": workspace.get("allowance"),
+                "users_count": workspace.get("membersCount"),
             })
         workspace_object = WorkspaceDetailed(**workspace_element) if detailed else Workspace(**workspace_element)
         normalized_workspaces.append(workspace_object)
@@ -36,15 +35,14 @@ def format_workspaces_detailed(workspaces: List[Any], params: Optional[dict] = N
 def format_workspaces_locations(workspaces: List[Any], params: Optional[dict] = None) -> List[Any]:
     purpose_filter = params.get("purpose", "local") if params else None
     purpose_filter_id = purpose_filter
-    if purpose_filter and purpose_filter is "mock":
+    if purpose_filter and purpose_filter == "mock":
         purpose_filter_id = "serviceMock"
     private_locations = []
     public_locations = []
     account_id = None
     for workspace in workspaces:
-        # The locations are inside a particular workspace
-        account_id = workspace["accountId"]
-        locations = workspace["locations"]
+        account_id = workspace.get("accountId")
+        locations = workspace.get("locations", [])
         for location in locations:
             purposes = location.get("purposes", {})
             if purpose_filter_id in purposes and purposes[purpose_filter_id] or not purpose_filter_id:

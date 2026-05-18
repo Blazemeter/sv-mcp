@@ -18,4 +18,6 @@ class WorkspaceDetailed(Workspace):
     owner: Dict[str, Any] = Field(description="The details of the owner of the workspace")
     allowance: Dict[str, Any] = Field(description="The available billing usage details")
     users_count: int = Field(description="The number of users in the workspace")
-    test_available_locations: Dict[str, Any] = Field(description="The location details available for test in the workspace")
+    test_available_locations: Optional[Dict[str, Any]] = Field(
+        None, description="The location details available for test in the workspace"
+    )

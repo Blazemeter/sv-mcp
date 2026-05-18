@@ -1,0 +1,8 @@
+[
+  {
+    "id": 777,
+    "name": "keystore.jks",
+    "type": "CERTIFICATE",
+    "primaryMetadata": {"filename": "keystore.jks", "size": 4096}
+  }
+]

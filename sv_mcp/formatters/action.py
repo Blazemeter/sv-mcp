@@ -13,7 +13,7 @@ def format_actions(actions: List[Any], params: Optional[dict] = None) -> List[Ac
                 id=action.get("id"),
                 name=action.get("name", "Unknown"),
                 actionType=action.get("actionType"),
-                definition=WebAction(**action.get("definition")),
+                definition=WebAction(**(action.get("definition") or {})),
                 assets=[AssignedAsset(**d) for d in action.get("assets") or []],
             )
         )

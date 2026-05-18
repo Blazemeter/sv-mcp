@@ -1,0 +1,17 @@
+[
+  {
+    "id": 888,
+    "name": "Webhook notify",
+    "actionType": "WEB_ACTION",
+    "definition": {
+      "urlValue": "https://hooks.example.com/notify",
+      "urlMethod": "POST",
+      "bodyContent": "{\"event\": \"deployed\"}",
+      "queryParameters": [],
+      "headers": [
+        {"name": "Content-Type", "value": "application/json"}
+      ]
+    },
+    "assets": []
+  }
+]

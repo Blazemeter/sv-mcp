@@ -96,7 +96,7 @@ def normalize_system_name(system: str) -> str:
 
 def get_binary_name(system: str, arch: str) -> str:
     suffix = '.exe' if system == 'windows' else ''
-    return f'sv-mcp-{system}-{arch}{suffix}'
+    return f'bzm-mcp-{system}-{arch}{suffix}'
 
 
 def get_icon_file(system: str) -> str:
@@ -151,7 +151,7 @@ def create_launcher_script(launcher_path: Path):
 set -e
 
 BIN_DIR="$(cd "$(dirname "$0")" && pwd)"
-BIN="$BIN_DIR/sv-mcp"
+BIN="$BIN_DIR/bzm-mcp"
 
 if [ -t 1 ]; then
   exec "$BIN" "$@"
@@ -189,14 +189,14 @@ def create_info_plist(plist_path: Path):
 
 
 def create_app_bundle(binary_name: str, arch: str, dist_dir: Path):
-    app_name = f"sv-mcp-{arch}.app"
+    app_name = f"mcp-bzm-{arch}.app"
     app_path = dist_dir / app_name
     contents_path = app_path / "Contents"
 
     macos_path = create_app_directory_structure(app_path)
 
     binary_path = dist_dir / binary_name
-    copy_binary_to_app(binary_path, macos_path / "sv-mcp")
+    copy_binary_to_app(binary_path, macos_path / "mcp-bzm")
 
     create_launcher_script(macos_path / "launcher.sh")
     create_info_plist(contents_path / "Info.plist")

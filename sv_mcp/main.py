@@ -10,6 +10,37 @@ from sv_mcp.config.token import BzmToken, BzmTokenError
 from sv_mcp.config.version import __version__, __executable__
 from server import register_tools
 
+BANNER = f"""
+╔══════════════════════════════════════════════════════╗
+║       BlazeMeter Service Virtualization MCP          ║
+║                    v{__version__:<32}║
+╚══════════════════════════════════════════════════════╝
+"""
+
+
+API_KEY_GUIDE = """
+  No API key found. Create a file named  api-key.json  in the same
+  directory as this binary with the following content:
+
+    {
+      "id": "your-api-key-id",
+      "secret": "your-api-key-secret"
+    }
+
+  To generate a key: BlazeMeter → ⚙ Settings → API Keys → Add Key.
+  Copy the ID and Secret shown at creation time (secret is shown once).
+"""
+
+
+def print_banner(mode: str, token_loaded: bool) -> None:
+    auth = "API key loaded" if token_loaded else "No API key found"
+    print(BANNER, file=sys.stderr)
+    print(f"  Mode : {mode}", file=sys.stderr)
+    print(f"  Auth : {auth}", file=sys.stderr)
+    if not token_loaded:
+        print(API_KEY_GUIDE, file=sys.stderr)
+    print("", file=sys.stderr)
+
 BLAZEMETER_API_KEY_FILE_PATH = os.getenv('API_KEY_PATH')
 
 LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
@@ -155,6 +186,10 @@ if __name__ == "__main__":
     # ---------------------------------------------------------
     # Launch server
     # ---------------------------------------------------------
+    if getattr(sys, 'frozen', False):
+        token_preview = get_token()
+        print_banner(mode=effective_mode, token_loaded=token_preview is not None)
+
     if effective_mode == "stdio":
         logging.disable(logging.CRITICAL)
         run(log_level="CRITICAL", mode="stdio")

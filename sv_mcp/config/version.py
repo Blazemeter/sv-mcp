@@ -5,7 +5,7 @@ from pathlib import Path
 
 
 def get_version():
-    pyproject = Path(__file__).parent.parent / "pyproject.toml"
+    pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
     if pyproject.exists():
         with open(pyproject, "rb") as f:
             data = tomllib.load(f)

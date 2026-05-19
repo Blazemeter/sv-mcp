@@ -43,7 +43,7 @@ pipeline {
         
         stage('Test') {
             steps {
-                sh "pip install . --break-system-packages"
+                sh "pip install '.[dev]' --break-system-packages"
                 sh "PYTHONPATH=. pytest --junitxml=reports/junit-report.xml"
                 junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
             }

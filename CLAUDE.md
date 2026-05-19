@@ -42,7 +42,7 @@ Async tests use `pytest-asyncio` (dev dependency). `asyncio_mode = "auto"` is se
 
 **Build standalone binary:**
 ```bash
-python build.py
+python sv_mcp/build.py
 ```
 
 **Docker:**

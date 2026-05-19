@@ -4,6 +4,9 @@ __pycache__/
 build/
 docs/
 bin/
+dist/
+htmlcov/
+integration/
 # dist/ - Keep this for binary artifacts
 wheels/
 *.egg-info

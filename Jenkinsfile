@@ -165,9 +165,9 @@ pipeline {
         failure {
             script {
                 // Send Slack notification if the pipeline fails
-                def errorMessage = currentBuild.description ?: "Unknown error"
-                slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
-                slackSend(channel: "#bm-alerts-blazemeter", message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
+                // def errorMessage = currentBuild.description ?: "Unknown error"
+                // slackSend(channel: "@" + getBuildUserSlackIdMB(), message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
+                // slackSend(channel: "#bm-alerts-blazemeter", message: "FAILED <${BUILD_URL} | *${JOB_NAME}*>. Error: ${errorMessage}", color: "#ff0000")
                 
                 // Send email notification
                 notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')

@@ -79,7 +79,7 @@ def _record_span_error(span: Any, error_type: str) -> None:
 
 def _http_status_to_error_type(status_code: int) -> str:
     if status_code in (401, 403):
-        return "auth_error"
+        return "auth_failed"
     if status_code == 404:
         return "not_found"
     if status_code == 429:
@@ -127,7 +127,7 @@ async def run_tool(
             _record_span_error(span, _http_status_to_error_type(e.response.status_code))
             raise
         except Exception:
-            _record_span_error(span, "unexpected_error")
+            _record_span_error(span, "tool_error")
             raise
 
         if result is not None and getattr(result, "error", None):

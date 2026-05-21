@@ -62,7 +62,7 @@ class TestRunTool:
             t.get_tracer.return_value = tracer
             with pytest.raises(httpx.HTTPStatusError):
                 await run_tool("t", "a", ctx, AsyncMock(side_effect=err))
-        span.set_attribute.assert_any_call("error.type", "auth_error")
+        span.set_attribute.assert_any_call("error.type", "auth_failed")
 
     async def test_reraises_httpx_404(self):
         ctx = _make_ctx()
@@ -95,7 +95,7 @@ class TestRunTool:
             t.get_tracer.return_value = tracer
             with pytest.raises(ValueError):
                 await run_tool("t", "a", ctx, AsyncMock(side_effect=ValueError("boom")))
-        span.set_attribute.assert_any_call("error.type", "unexpected_error")
+        span.set_attribute.assert_any_call("error.type", "tool_error")
 
     async def test_marks_span_failed_on_result_error(self):
         ctx = _make_ctx()

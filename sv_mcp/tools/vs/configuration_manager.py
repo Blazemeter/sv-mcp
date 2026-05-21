@@ -9,6 +9,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.configuration import format_configurations
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.configuration import Configuration
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -106,27 +107,31 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         config_manager = ConfigurationManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await config_manager.read(args["workspace_id"], args["configuration_id"])
                 case "list":
-                    return await config_manager.list(args["workspace_id"], args.get("limit", 50),
-                                                     args.get("offset", 0))
-                case "create":
-                    return await config_manager.create(args["workspace_id"], args["configuration_name"],
-                                                       args["configuration_map"])
-                case "update":
-                    return await config_manager.update(args["workspace_id"], args["configuration_id"],
-                                                       args["configuration_name"], args["configuration_map"])
-                case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in configuration manager tool"
+                    return await config_manager.list(
+                        args["workspace_id"], args.get("limit", 50), args.get("offset", 0)
                     )
+                case "create":
+                    return await config_manager.create(
+                        args["workspace_id"], args["configuration_name"], args["configuration_map"]
+                    )
+                case "update":
+                    return await config_manager.update(
+                        args["workspace_id"], args["configuration_id"],
+                        args["configuration_name"], args["configuration_map"],
+                    )
+                case _:
+                    return BaseResult(error=f"Action {action} not found in configuration manager tool")
+
+        try:
+            return await run_tool("virtual_services_configuration", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

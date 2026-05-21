@@ -28,23 +28,20 @@ pipeline {
                 script {
                     currentBuild.displayName = "#${env.BUILD_NUMBER}"
                 }
+                sh "pip install uv --break-system-packages"
             }
         }
         
         stage('Build') {
             steps {
-                script {
-                    sh "pip install build --break-system-packages"
-                    sh "python -m build --sdist"
-                    sh "pip install . --break-system-packages"
-                }
+                sh "uv sync --extra telemetry --frozen"
+                sh "uv build --sdist"
             }
         }
         
         stage('Test') {
             steps {
-                sh "pip install '.[dev]' --break-system-packages"
-                sh "PYTHONPATH=. pytest --junitxml=reports/junit-report.xml"
+                sh "uv run pytest --junitxml=reports/junit-report.xml"
                 junit allowEmptyResults: true, testResults: 'reports/junit-report.xml', skipPublishingChecks: true, skipMarkingBuildUnstable: true
             }
         }

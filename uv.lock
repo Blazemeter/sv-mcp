@@ -1030,10 +1030,8 @@ telemetry = [
 ]
 
 [package.dev-dependencies]
-build = [
-    { name = "pyinstaller" },
-]
 dev = [
+    { name = "pyinstaller" },
     { name = "pytest" },
     { name = "pytest-asyncio" },
     { name = "pytest-cov" },
@@ -1055,8 +1053,8 @@ requires-dist = [
 provides-extras = ["dev", "telemetry"]
 
 [package.metadata.requires-dev]
-build = [{ name = "pyinstaller", specifier = ">=6.0.0" }]
 dev = [
+    { name = "pyinstaller", specifier = ">=6.0.0" },
     { name = "pytest", specifier = ">=8.0" },
     { name = "pytest-asyncio", specifier = ">=0.23" },
     { name = "pytest-cov", specifier = ">=7.1.0" },

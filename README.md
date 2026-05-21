@@ -253,7 +253,7 @@ export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
 Each span includes:
 - `gen_ai.tool.name` — MCP tool name (e.g. `virtual_services_http_transaction`)
 - `mcp.tool.action` — action dispatched (e.g. `create_and_test`)
-- `error.type` — set on failure (`auth_error`, `not_found`, `rate_limited`, `server_error`, `api_error`)
+- `error.type` — set on failure (`auth_failed`, `not_found`, `rate_limited`, `server_error`, `timeout`, `tool_error`, `api_error`)
 
 **W3C Trace Context propagation:** if your MCP client passes `traceparent`/`tracestate` in `_meta`, spans are linked to the parent trace automatically.
 

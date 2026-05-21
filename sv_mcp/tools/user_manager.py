@@ -9,6 +9,7 @@ from sv_mcp.config.blazemeter import TOOLS_PREFIX, USER_ENDPOINT
 from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.user import format_users
 from sv_mcp.models.result import BaseResult
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import bzm_api_request
 
 
@@ -45,7 +46,8 @@ def register(mcp, token: Optional[BzmToken]):
     ) -> BaseResult:
 
         user_manager = UserManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await user_manager.read()
@@ -53,6 +55,9 @@ def register(mcp, token: Optional[BzmToken]):
                     return BaseResult(
                         error=f"Action {action} not found in user manager tool"
                     )
+
+        try:
+            return await run_tool("blazemeter_user", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(
                 error=f"Error: {traceback.format_exc()}"

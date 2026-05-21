@@ -127,9 +127,9 @@ async def run_tool(
             span.set_attribute("gen_ai.operation.name", "execute_tool")
             span.set_attribute("mcp.tool.action", action)
             client_name, client_version = _get_client_info(ctx)
-            if client_name:
+            if client_name is not None:
                 span.set_attribute("mcp.client.name", client_name)
-            if client_version:
+            if client_version is not None:
                 span.set_attribute("mcp.client.version", client_version)
         except Exception:
             pass

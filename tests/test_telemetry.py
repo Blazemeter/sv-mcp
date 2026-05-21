@@ -9,6 +9,7 @@ from sv_mcp.telemetry import run_tool, init_telemetry
 def _make_ctx(meta=None):
     ctx = MagicMock()
     ctx.request_context.request.params.meta = meta or {}
+    ctx.request_context.session.client_params = None
     return ctx
 
 
@@ -151,6 +152,16 @@ class TestRunTool:
             result = BaseResult(result={})
             returned = await run_tool("t", "a", ctx, AsyncMock(return_value=result))
         assert returned is result
+
+    async def test_omits_client_info_when_absent(self):
+        ctx = _make_ctx()  # client_params = None → _get_client_info returns (None, None)
+        tracer, span = _make_tracer_and_span()
+        with patch("sv_mcp.telemetry.trace") as t:
+            t.get_tracer.return_value = tracer
+            await run_tool("blazemeter_user", "read", ctx, AsyncMock(return_value=BaseResult()))
+        attribute_names = [c[0][0] for c in span.set_attribute.call_args_list]
+        assert "mcp.client.name" not in attribute_names
+        assert "mcp.client.version" not in attribute_names
 
 
 class TestInitTelemetry:

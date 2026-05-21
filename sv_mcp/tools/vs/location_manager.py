@@ -9,6 +9,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.location import format_locations
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.location import Location
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -47,18 +48,18 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def location(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         location_manager = LocationManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "list":
                     return await location_manager.list(args["workspace_id"])
                 case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in location manager tool"
-                    )
+                    return BaseResult(error=f"Action {action} not found in location manager tool")
+
+        try:
+            return await run_tool("virtual_services_location", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

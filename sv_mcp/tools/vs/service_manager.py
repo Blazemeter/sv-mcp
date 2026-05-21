@@ -9,6 +9,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.service import format_services
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.service import Service
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -95,25 +96,26 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         service_manager = ServiceManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await service_manager.read(args["workspace_id"], args["service_id"])
                 case "list":
-                    return await service_manager.list(args["workspace_id"], args.get("limit", 50),
-                                                      args.get("offset", 0))
+                    return await service_manager.list(
+                        args["workspace_id"], args.get("limit", 50), args.get("offset", 0)
+                    )
                 case "create":
                     return await service_manager.create(args["service_name"], args["workspace_id"])
                 case "update":
                     return await service_manager.update(args["workspace_id"], args["id"], args["service_name"])
                 case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in service manager tool"
-                    )
+                    return BaseResult(error=f"Action {action} not found in service manager tool")
+
+        try:
+            return await run_tool("virtual_services_service", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

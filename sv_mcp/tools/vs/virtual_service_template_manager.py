@@ -10,6 +10,7 @@ from sv_mcp.formatters.virtual_service_template import format_virtual_service_te
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 from sv_mcp.models.vs.virtual_service_template import VirtualServiceTemplate
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -224,33 +225,28 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             ctx: Context,
     ) -> BaseResult:
         vs_manager = VirtualServiceTemplateManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await vs_manager.read(args["workspace_id"], args["id"])
                 case "list":
                     return await vs_manager.list(
-                        args["workspace_id"],
-                        args.get("serviceId"),
-                        args.get("limit", 50),
-                        args.get("offset", 0),
+                        args["workspace_id"], args.get("serviceId"),
+                        args.get("limit", 50), args.get("offset", 0),
                     )
                 case "create":
                     return await vs_manager.create(
-                        args["workspace_id"],
-                        args["name"],
-                        args["serviceId"],
+                        args["workspace_id"], args["name"], args["serviceId"],
                         args.get("noMatchingRequestPreference", "return404"),
-                        args.get("mockServiceTransactions", [])
+                        args.get("mockServiceTransactions", []),
                     )
                 case "update":
                     return await vs_manager.update(
-                        args["workspace_id"],
-                        args["template_id"],
-                        args.get("name"),
-                        args.get("serviceId"),
+                        args["workspace_id"], args["template_id"],
+                        args.get("name"), args.get("serviceId"),
                         args.get("noMatchingRequestPreference"),
-                        args.get("mockServiceTransactions", [])
+                        args.get("mockServiceTransactions", []),
                     )
                 case "assign_transactions":
                     return await vs_manager.assign_transactions(
@@ -266,22 +262,19 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     )
                 case "assign_keystore_truststore":
                     return await vs_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "SERVER_KEYSTORE_TRUSTSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["id"], args["workspace_id"],
+                        "SERVER_KEYSTORE_TRUSTSTORE", args["asset_id"], args["alias"],
                     )
                 case "assign_keystore":
                     return await vs_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "SERVER_KEYSTORE",
-                        args["asset_id"],
-                        None,
+                        args["id"], args["workspace_id"],
+                        "SERVER_KEYSTORE", args["asset_id"], None,
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service template manager tool")
+
+        try:
+            return await run_tool("virtual_services_virtual_service_template", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:

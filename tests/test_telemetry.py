@@ -12,6 +12,14 @@ def _make_ctx(meta=None):
     return ctx
 
 
+def _make_ctx_with_client(name="claude-code", version="1.2.3"):
+    ctx = MagicMock()
+    ctx.request_context.request.params.meta = {}
+    ctx.request_context.session.client_params.clientInfo.name = name
+    ctx.request_context.session.client_params.clientInfo.version = version
+    return ctx
+
+
 def _make_tracer_and_span():
     span = MagicMock()
     cm = MagicMock()
@@ -42,6 +50,15 @@ class TestRunTool:
         span.set_attribute.assert_any_call("mcp.tool.action", "read")
         span.set_attribute.assert_any_call("mcp.method.name", "tools/call")
         span.set_attribute.assert_any_call("gen_ai.operation.name", "execute_tool")
+
+    async def test_sets_client_info_attributes(self):
+        ctx = _make_ctx_with_client("claude-code", "1.2.3")
+        tracer, span = _make_tracer_and_span()
+        with patch("sv_mcp.telemetry.trace") as t:
+            t.get_tracer.return_value = tracer
+            await run_tool("blazemeter_user", "read", ctx, AsyncMock(return_value=BaseResult()))
+        span.set_attribute.assert_any_call("mcp.client.name", "claude-code")
+        span.set_attribute.assert_any_call("mcp.client.version", "1.2.3")
 
     async def test_span_kind_server(self):
         ctx = _make_ctx()

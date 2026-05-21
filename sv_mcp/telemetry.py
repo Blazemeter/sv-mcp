@@ -65,6 +65,14 @@ def _extract_trace_context(meta: dict):
         return None
 
 
+def _get_client_info(ctx: Any):
+    try:
+        info = ctx.request_context.session.client_params.clientInfo
+        return info.name, info.version
+    except Exception:
+        return None, None
+
+
 def _record_span_error(span: Any, error_type: str) -> None:
     try:
         span.set_attribute("error.type", error_type)
@@ -118,6 +126,11 @@ async def run_tool(
             span.set_attribute("gen_ai.tool.name", tool_name)
             span.set_attribute("gen_ai.operation.name", "execute_tool")
             span.set_attribute("mcp.tool.action", action)
+            client_name, client_version = _get_client_info(ctx)
+            if client_name:
+                span.set_attribute("mcp.client.name", client_name)
+            if client_version:
+                span.set_attribute("mcp.client.version", client_version)
         except Exception:
             pass
 

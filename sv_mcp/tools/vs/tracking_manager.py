@@ -9,6 +9,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.tracking import format_trackings, format_asset_trackings
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.trackings import MasterTracking
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -52,20 +53,20 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def tracking(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         tracking_manager = TrackingManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await tracking_manager.read(args["tracking_id"])
                 case "read_asset_tracking":
                     return await tracking_manager.read_asset_tracking(args["tracking_id"])
                 case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in tracking manager tool"
-                    )
+                    return BaseResult(error=f"Action {action} not found in tracking manager tool")
+
+        try:
+            return await run_tool("virtual_services_tracking", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

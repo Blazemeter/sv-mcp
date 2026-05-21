@@ -8,7 +8,8 @@ from mcp.server.fastmcp import FastMCP
 
 from sv_mcp.config.token import BzmToken, BzmTokenError
 from sv_mcp.config.version import __version__, __executable__
-from server import register_tools
+from sv_mcp.server import register_tools
+from sv_mcp.telemetry import init_telemetry
 
 BANNER = f"""
 ╔══════════════════════════════════════════════════════╗
@@ -82,6 +83,7 @@ def get_token():
 
 
 def run(log_level: str = "DEBUG", mode: str = "stdio"):
+    init_telemetry("sv-mcp", __version__)
     token = get_token()
     instructions = """
     # BlazeMeter Virtual Services MCP Server
@@ -137,8 +139,8 @@ def run(log_level: str = "DEBUG", mode: str = "stdio"):
         mcp.run(transport="streamable-http")
 
 
-if __name__ == "__main__":
-    parser = argparse.ArgumentParser(prog="bzm-mcp")
+def main():
+    parser = argparse.ArgumentParser(prog="sv-mcp")
 
     parser.add_argument(
         "--version",
@@ -160,12 +162,6 @@ if __name__ == "__main__":
     args = parser.parse_args()
     init_logging(args.log_level)
 
-    # ---------------------------------------------------------
-    # Determine effective mode:
-    # 1. CLI flags override everything
-    # 2. MCP_MODE env next
-    # 3. Default = "stdio"
-    # ---------------------------------------------------------
     cli_mode = None
     if args.mcp:
         cli_mode = "stdio"
@@ -183,9 +179,6 @@ if __name__ == "__main__":
     else:
         effective_mode = "stdio"
 
-    # ---------------------------------------------------------
-    # Launch server
-    # ---------------------------------------------------------
     if getattr(sys, 'frozen', False):
         token_preview = get_token()
         print_banner(mode=effective_mode, token_loaded=token_preview is not None)
@@ -193,12 +186,13 @@ if __name__ == "__main__":
     if effective_mode == "stdio":
         logging.disable(logging.CRITICAL)
         run(log_level="CRITICAL", mode="stdio")
-
     elif effective_mode == "http":
         run(log_level=args.log_level.upper(), mode="http")
-
     elif effective_mode == "http-stateless":
         run(log_level=args.log_level.upper(), mode="http-stateless")
-
     else:
         raise ValueError(f"Invalid MCP_MODE: {effective_mode}")
+
+
+if __name__ == "__main__":
+    main()

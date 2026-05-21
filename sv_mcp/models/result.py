@@ -4,7 +4,7 @@ from pydantic import BaseModel, Field
 
 
 class BaseResult(BaseModel):
-    result: Optional[List[Any]] = Field(description="Result List", default=None)
+    result: Optional[Any] = Field(description="Result", default=None)
     total: Optional[int] = Field(description="Total available records", default=None)
     has_more: Optional[bool] = Field(description="More records per page to list", default=None)
     error: Optional[str] = Field(description="Error message", default=None)

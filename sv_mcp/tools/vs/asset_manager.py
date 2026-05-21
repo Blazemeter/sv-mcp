@@ -13,6 +13,7 @@ from sv_mcp.formatters.virtual_service import format_virtual_services_action
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.asset import Asset
 from sv_mcp.models.vs.virtual_service import ActionResult
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -135,27 +136,29 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         assert_manager = AssetManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await assert_manager.read(args["workspace_id"], args["asset_id"])
                 case "list":
-                    return await assert_manager.list(args["workspace_id"], args.get("limit", 50),
-                                                     args.get("offset", 0))
-                case "upload":
-                    return await assert_manager.upload(args["workspace_id"], args['file_path'])
-                case "set_keystore_passwords":
-                    return await assert_manager.set_keystore_passwords(args["workspace_id"], args['asset_id'],
-                                                                       args["keystore_password"],
-                                                                       args["key_passwords"])
-                case _:
-                    return BaseResult(
-                        error=f"Asset {action} not found in asset manager tool"
+                    return await assert_manager.list(
+                        args["workspace_id"], args.get("limit", 50), args.get("offset", 0)
                     )
+                case "upload":
+                    return await assert_manager.upload(args["workspace_id"], args["file_path"])
+                case "set_keystore_passwords":
+                    return await assert_manager.set_keystore_passwords(
+                        args["workspace_id"], args["asset_id"],
+                        args["keystore_password"], args["key_passwords"],
+                    )
+                case _:
+                    return BaseResult(error=f"Asset {action} not found in asset manager tool")
+
+        try:
+            return await run_tool("virtual_services_asset", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

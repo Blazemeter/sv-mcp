@@ -7,6 +7,7 @@ from sv_mcp.config.blazemeter import ACCOUNTS_ENDPOINT, TOOLS_PREFIX
 from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.account import format_accounts
 from sv_mcp.models.result import BaseResult
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import bzm_api_request
 
 
@@ -78,7 +79,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def account(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         account_manager = AccountManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await account_manager.read(args["account_id"])
@@ -88,6 +90,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return BaseResult(
                         error=f"Action {action} not found in account manager tool"
                     )
+
+        try:
+            return await run_tool("blazemeter_account", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(
                 error=f"Error: {traceback.format_exc()}"

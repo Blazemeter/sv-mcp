@@ -239,6 +239,33 @@ Example:
 MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_service"
 
 
+### **MCP Client Configuration using uvx (Recommended)**
+
+[uvx](https://docs.astral.sh/uv/guides/tools/) installs and runs the package in an isolated environment — no manual setup required.
+
+```json
+{
+  "mcpServers": {
+    "blazemeter-sv": {
+      "command": "uvx",
+      "args": [
+        "--from", "git+https://github.com/Blazemeter/sv-mcp.git",
+        "sv-mcp"
+      ],
+      "env": {
+        "API_KEY_PATH": "/path/to/api-key.json"
+      }
+    }
+  }
+}
+```
+
+To pin a specific version or branch, change the `--from` value:
+- Tag: `git+https://github.com/Blazemeter/sv-mcp.git@v1.0.4`
+- Branch: `git+https://github.com/Blazemeter/sv-mcp.git@main`
+
+---
+
 ### **MCP Client Configuration for Local testing using VS Code or Claude Desktop**
    1. Run main.py with --mcp flag
    2. Configure your MCP client with the following settings:

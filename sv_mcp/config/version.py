@@ -1,3 +1,4 @@
+import importlib.metadata
 import os
 import sys
 import tomllib
@@ -5,6 +6,10 @@ from pathlib import Path
 
 
 def get_version():
+    try:
+        return importlib.metadata.version("sv-mcp")
+    except importlib.metadata.PackageNotFoundError:
+        pass
     pyproject = Path(__file__).parent.parent.parent / "pyproject.toml"
     if pyproject.exists():
         with open(pyproject, "rb") as f:

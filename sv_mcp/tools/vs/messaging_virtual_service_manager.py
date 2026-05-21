@@ -10,6 +10,7 @@ from sv_mcp.formatters.virtual_service import format_virtual_services, format_vi
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 from sv_mcp.models.vs.virtual_service import VirtualService, ActionResult
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 from sv_mcp.tools.vs.base_virtual_service_manager import BaseVirtualServiceManager
 
@@ -265,7 +266,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             ctx: Context,
     ) -> BaseResult:
         vs_manager = MessagingVirtualServiceManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "deploy":
                     return await vs_manager.deploy(args["workspace_id"], args["id"])
@@ -352,6 +354,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")
+
+        try:
+            return await run_tool("virtual_services_messaging_virtual_service", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:

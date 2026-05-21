@@ -10,6 +10,7 @@ from sv_mcp.formatters.virtual_service import format_virtual_services, format_vi
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.mock_service_transaction import MockServiceTransaction
 from sv_mcp.models.vs.virtual_service import VirtualService, ActionResult
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 from sv_mcp.tools.vs.base_virtual_service_manager import BaseVirtualServiceManager
 
@@ -241,7 +242,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             ctx: Context,
     ) -> BaseResult:
         vs_manager = VirtualServiceManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "deploy":
                     return await vs_manager.deploy(args["workspace_id"], args["id"])
@@ -253,30 +255,22 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await vs_manager.read(args["workspace_id"], args["id"])
                 case "list":
                     return await vs_manager.list(
-                        args["workspace_id"],
-                        args.get("serviceId"),
-                        args.get("limit", 50),
-                        args.get("offset", 0),
+                        args["workspace_id"], args.get("serviceId"),
+                        args.get("limit", 50), args.get("offset", 0),
                     )
                 case "create":
                     return await vs_manager.create(
-                        args["workspace_id"],
-                        args["name"],
-                        args["serviceId"],
-                        args["harborId"],
-                        args["shipId"],
+                        args["workspace_id"], args["name"], args["serviceId"],
+                        args["harborId"], args["shipId"],
                         args.get("noMatchingRequestPreference", "return404"),
                         args.get("endpointPreference", "HTTPS"),
                         args.get("mockServiceTransactions", []),
                     )
                 case "update":
                     return await vs_manager.update(
-                        args["workspace_id"],
-                        args["vs_id"],
-                        args.get("name"),
-                        args.get("serviceId"),
-                        args.get("harborId"),
-                        args.get("shipId"),
+                        args["workspace_id"], args["vs_id"],
+                        args.get("name"), args.get("serviceId"),
+                        args.get("harborId"), args.get("shipId"),
                         args.get("noMatchingRequestPreference"),
                         args.get("endpointPreference"),
                         args.get("mockServiceTransactions", []),
@@ -296,38 +290,31 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "set_proxy":
                     return await vs_manager.set_proxy(
                         args["workspace_id"], args["id"],
-                        args.get("proxyUrl"),
-                        args.get("nonProxyHosts"),
-                        args.get("username"),
-                        args.get("password"),
-                        args.get("certificate_id")
+                        args.get("proxyUrl"), args.get("nonProxyHosts"),
+                        args.get("username"), args.get("password"),
+                        args.get("certificate_id"),
                     )
                 case "unset_proxy":
-                    return await vs_manager.unset_proxy(
-                        args["workspace_id"], args["id"]
-                    )
+                    return await vs_manager.unset_proxy(args["workspace_id"], args["id"])
                 case "apply_template":
                     return await vs_manager.apply_template(
                         args["workspace_id"], args["id"], args["template_id"]
                     )
                 case "assign_keystore_truststore":
                     return await vs_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "SERVER_KEYSTORE_TRUSTSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["id"], args["workspace_id"],
+                        "SERVER_KEYSTORE_TRUSTSTORE", args["asset_id"], args["alias"],
                     )
                 case "assign_keystore":
                     return await vs_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "SERVER_KEYSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["id"], args["workspace_id"],
+                        "SERVER_KEYSTORE", args["asset_id"], args["alias"],
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in virtual service manager tool")
+
+        try:
+            return await run_tool("virtual_services_virtual_service", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:

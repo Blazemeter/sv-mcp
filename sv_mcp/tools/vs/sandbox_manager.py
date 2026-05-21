@@ -10,6 +10,7 @@ from sv_mcp.formatters.sandbox import format_sandbox_test_request, format_sandbo
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.sandbox_request import SandboxRequest
 from sv_mcp.models.vs.sandbox_response import SandboxResponse
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -70,23 +71,20 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def sandbox(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         sandbox_manager = SandboxManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "init":
                     return await sandbox_manager.init(args["workspace_id"], args["transaction_id"])
                 case "test_request":
-                    return await sandbox_manager.test_request(
-                        args["request"],
-                        args["workspace_id"]
-                    )
+                    return await sandbox_manager.test_request(args["request"], args["workspace_id"])
                 case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in sandbox manager tool"
-                    )
+                    return BaseResult(error=f"Action {action} not found in sandbox manager tool")
+
+        try:
+            return await run_tool("virtual_services_sandbox", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

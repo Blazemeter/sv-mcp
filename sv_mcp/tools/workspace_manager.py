@@ -10,6 +10,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.workspace import format_workspaces, format_workspaces_detailed
 from sv_mcp.models.result import BaseResult
 from sv_mcp.tools import bridge
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import bzm_api_request
 
 
@@ -88,17 +89,22 @@ def register(mcp, token: Optional[BzmToken]):
     ) -> BaseResult:
 
         workspace_manager = WorkspaceManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await workspace_manager.read(args["workspace_id"])
                 case "list":
-                    return await workspace_manager.list(args["account_id"], args.get("limit", 50),
-                                                        args.get("offset", 0))
+                    return await workspace_manager.list(
+                        args["account_id"], args.get("limit", 50), args.get("offset", 0)
+                    )
                 case _:
                     return BaseResult(
                         error=f"Action {action} not found in workspace manager tool"
                     )
+
+        try:
+            return await run_tool("blazemeter_workspaces", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
             return BaseResult(
                 error=f"Error: {traceback.format_exc()}"

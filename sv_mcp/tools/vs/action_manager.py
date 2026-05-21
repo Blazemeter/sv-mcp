@@ -9,6 +9,7 @@ from sv_mcp.config.token import BzmToken
 from sv_mcp.formatters.action import format_actions
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.web_action import WebAction
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -103,39 +104,36 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     )
     async def service(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         action_manager = ActionManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "create_http_call":
-                    return await action_manager.create_http_call(args["action_name"], args["workspace_id"],
-                                                                 args["transaction_id"], args["action"])
+                    return await action_manager.create_http_call(
+                        args["action_name"], args["workspace_id"],
+                        args["transaction_id"], args["action"],
+                    )
                 case "create_web_hook":
-                    return await action_manager.create_web_hook(args["action_name"], args["workspace_id"],
-                                                                args["transaction_id"], args["action"])
+                    return await action_manager.create_web_hook(
+                        args["action_name"], args["workspace_id"],
+                        args["transaction_id"], args["action"],
+                    )
                 case "assign_keystore":
                     return await action_manager.assign_asset(
-                        args["id"],
-                        args["transaction_id"],
-                        args["workspace_id"],
-                        "CLIENT_KEYSTORE_TRUSTSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["id"], args["transaction_id"], args["workspace_id"],
+                        "CLIENT_KEYSTORE_TRUSTSTORE", args["asset_id"], args["alias"],
                     )
                 case "assign_certificate":
                     return await action_manager.assign_asset(
-                        args["id"],
-                        args["transaction_id"],
-                        args["workspace_id"],
-                        "CLIENT_TRUSTSTORE_CERT",
-                        args["asset_id"],
-                        None)
-                case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in action manager tool"
+                        args["id"], args["transaction_id"], args["workspace_id"],
+                        "CLIENT_TRUSTSTORE_CERT", args["asset_id"], None,
                     )
+                case _:
+                    return BaseResult(error=f"Action {action} not found in action manager tool")
+
+        try:
+            return await run_tool("virtual_services_action", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

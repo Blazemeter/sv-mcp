@@ -144,8 +144,7 @@ class TestRunTool:
         assert returned is result
 
     async def test_survives_broken_ctx(self):
-        ctx = MagicMock()
-        ctx.request_context.request.params.meta = None
+        ctx = _make_ctx(meta=None)
         tracer, _ = _make_tracer_and_span()
         with patch("sv_mcp.telemetry.trace") as t:
             t.get_tracer.return_value = tracer

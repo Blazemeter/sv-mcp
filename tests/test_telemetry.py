@@ -88,6 +88,16 @@ class TestRunTool:
                 await run_tool("t", "a", ctx, AsyncMock(side_effect=err))
         span.set_attribute.assert_any_call("error.type", "server_error")
 
+    async def test_reraises_httpx_timeout(self):
+        ctx = _make_ctx()
+        tracer, span = _make_tracer_and_span()
+        err = httpx.TimeoutException("timed out")
+        with patch("sv_mcp.telemetry.trace") as t:
+            t.get_tracer.return_value = tracer
+            with pytest.raises(httpx.TimeoutException):
+                await run_tool("t", "a", ctx, AsyncMock(side_effect=err))
+        span.set_attribute.assert_any_call("error.type", "timeout")
+
     async def test_reraises_generic_exception(self):
         ctx = _make_ctx()
         tracer, span = _make_tracer_and_span()

@@ -123,6 +123,9 @@ async def run_tool(
 
         try:
             result = await dispatch()
+        except httpx.TimeoutException:
+            _record_span_error(span, "timeout")
+            raise
         except httpx.HTTPStatusError as e:
             _record_span_error(span, _http_status_to_error_type(e.response.status_code))
             raise

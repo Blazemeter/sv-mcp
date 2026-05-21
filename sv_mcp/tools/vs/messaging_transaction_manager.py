@@ -12,6 +12,7 @@ from sv_mcp.formatters.transaction import format_messaging_transactions
 from sv_mcp.formatters.validations import format_validation_request
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.messaging_transaction import MessagingTransaction
+from sv_mcp.telemetry import run_tool
 from sv_mcp.tools.utils import vs_api_request
 
 
@@ -358,7 +359,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             ctx: Context
     ) -> BaseResult:
         transaction_manager = MessagingTransactionManager(token, ctx)
-        try:
+
+        async def _dispatch():
             match action:
                 case "read":
                     return await transaction_manager.read(args["workspace_id"], args["id"])
@@ -367,25 +369,17 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args["workspace_id"],
                         args.get("serviceId"),
                         args.get("limit", 50),
-                        args.get("offset", 0)
+                        args.get("offset", 0),
                     )
                 case "create":
                     return await transaction_manager.create(
-                        args["name"],
-                        args["workspace_id"],
-                        args["serviceId"],
-                        args["type"],
-                        args["dsl"],
-                        args.get("delay", None),
+                        args["name"], args["workspace_id"], args["serviceId"],
+                        args["type"], args["dsl"], args.get("delay", None),
                     )
                 case "update":
                     return await transaction_manager.update(
-                        args["id"],
-                        args["name"],
-                        args["workspace_id"],
-                        args["type"],
-                        args["dsl"],
-                        args.get("delay", None),
+                        args["id"], args["name"], args["workspace_id"],
+                        args["type"], args["dsl"], args.get("delay", None),
                     )
                 case "validate_template":
                     return await transaction_manager.validate_template(args["template"])
@@ -393,28 +387,21 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await transaction_manager.convert_template(args["template"])
                 case "assign_keystore":
                     return await transaction_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "CLIENT_KEYSTORE_TRUSTSTORE",
-                        args["asset_id"],
-                        args["alias"],
+                        args["id"], args["workspace_id"],
+                        "CLIENT_KEYSTORE_TRUSTSTORE", args["asset_id"], args["alias"],
                     )
                 case "assign_certificate":
                     return await transaction_manager.assign_asset(
-                        args["id"],
-                        args["workspace_id"],
-                        "CLIENT_TRUSTSTORE_CERT",
-                        args["asset_id"],
-                        None,
+                        args["id"], args["workspace_id"],
+                        "CLIENT_TRUSTSTORE_CERT", args["asset_id"], None,
                     )
                 case _:
-                    return BaseResult(
-                        error=f"Action {action} not found in transaction manager tool"
-                    )
+                    return BaseResult(error=f"Action {action} not found in transaction manager tool")
+
+        try:
+            return await run_tool("virtual_services_messaging_transaction", action, ctx, _dispatch)
         except httpx.HTTPStatusError:
-            return BaseResult(
-                error=f"Error: {traceback.format_exc()}"
-            )
+            return BaseResult(error=f"Error: {traceback.format_exc()}")
         except Exception:
             return BaseResult(
                 error=f"""Error: {traceback.format_exc()}

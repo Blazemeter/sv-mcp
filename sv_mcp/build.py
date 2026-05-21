@@ -71,6 +71,12 @@ def build():
         f'--name={name}',
         '--clean',
         '--noconfirm',
+        '--hidden-import=opentelemetry.sdk.trace',
+        '--hidden-import=opentelemetry.sdk.trace.export',
+        '--hidden-import=opentelemetry.sdk.resources',
+        '--hidden-import=opentelemetry.exporter.otlp.proto.http.trace_exporter',
+        '--hidden-import=opentelemetry.propagate',
+        '--collect-submodules=opentelemetry',
     ])
 
 if __name__ == "__main__":

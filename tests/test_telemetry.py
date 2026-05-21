@@ -43,6 +43,15 @@ class TestRunTool:
         span.set_attribute.assert_any_call("mcp.method.name", "tools/call")
         span.set_attribute.assert_any_call("gen_ai.operation.name", "execute_tool")
 
+    async def test_span_kind_server(self):
+        ctx = _make_ctx()
+        tracer, _ = _make_tracer_and_span()
+        with patch("sv_mcp.telemetry.trace") as t:
+            t.get_tracer.return_value = tracer
+            await run_tool("blazemeter_user", "read", ctx, AsyncMock(return_value=BaseResult()))
+        _, kwargs = tracer.start_as_current_span.call_args
+        assert kwargs.get("kind") == t.SpanKind.SERVER
+
     async def test_reraises_httpx_401(self):
         ctx = _make_ctx()
         tracer, span = _make_tracer_and_span()

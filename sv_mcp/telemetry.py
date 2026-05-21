@@ -105,6 +105,7 @@ async def run_tool(
         span_cm = tracer.start_as_current_span(
             f"tools/call {tool_name}",
             context=parent_ctx,
+            kind=trace.SpanKind.SERVER,
             record_exception=False,
             set_status_on_exception=False,
         )

@@ -1009,7 +1009,7 @@ wheels = [
 [[package]]
 name = "sv-mcp"
 version = "1.0.4"
-source = { virtual = "." }
+source = { editable = "." }
 dependencies = [
     { name = "httpx", extra = ["http2"] },
     { name = "mcp", extra = ["cli"] },

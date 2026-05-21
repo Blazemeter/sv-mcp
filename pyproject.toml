@@ -29,6 +29,13 @@ telemetry = [
     "opentelemetry-exporter-otlp>=1.20.0",
 ]
 
+[build-system]
+requires = ["setuptools>=68"]
+build-backend = "setuptools.build_meta"
+
+[tool.uv]
+package = true
+
 [tool.setuptools.packages.find]
 include = ["sv_mcp*"]
 

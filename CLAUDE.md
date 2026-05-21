@@ -10,8 +10,9 @@ This is the **BlazeMeter Service Virtualization MCP Server** — a Python MCP se
 
 **Setup (uses `uv` package manager):**
 ```bash
-uv sync              # production deps
-uv sync --extra dev  # includes pytest and pytest-asyncio for testing
+uv sync                         # production deps (includes opentelemetry-api)
+uv sync --extra dev             # includes pytest and pytest-asyncio for testing
+uv sync --extra telemetry       # adds OTel SDK + OTLP exporter for span export
 ```
 
 **Run the server:**
@@ -60,6 +61,8 @@ docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> sv-mcp
 | `MCP_MODE` | Override mode: `stdio`, `http`, `http-stateless` |
 | `MCP_ENABLED_TOOLS` | Comma-separated tool names to enable (all enabled if unset) |
 | `MCP_DOCKER` | Set `true` when running in Docker |
+| `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL to enable span export (e.g. `http://localhost:4318`) |
+| `OTEL_SDK_DISABLED` | Set `true` to disable all OTel tracing |
 
 ## Architecture
 
@@ -68,6 +71,7 @@ The codebase follows a layered architecture:
 ```
 main.py           → Entry point: CLI args, token loading, FastMCP init
 server.py         → Tool registration hub (respects MCP_ENABLED_TOOLS filtering)
+telemetry.py      → OTel helpers: init_telemetry() + run_tool() span wrapper
 tools/            → MCP tool implementations (async def register(mcp, token))
   utils.py        → Centralized httpx client (HTTP/2, basic auth, timeouts)
   vs/             → 14 Virtual Service tool managers
@@ -89,6 +93,8 @@ config/
 **Tool registration pattern:** Each manager in `tools/` and `tools/vs/` exports `async def register(mcp, token)`. `server.py` calls all of them, optionally filtered by `MCP_ENABLED_TOOLS`.
 
 **Data flow:** MCP tool call → manager → `tools/utils.py` (httpx) → BlazeMeter API → formatter → Pydantic model → `BaseResult` response.
+
+**OTel instrumentation pattern:** every tool manager wraps its `match action:` block in an `async def _dispatch()` closure and calls `run_tool(tool_name, action, ctx, _dispatch)`. `run_tool` opens a span, awaits the closure, records errors, and re-raises — so existing `except` handlers are unchanged. When `opentelemetry-api` is absent or `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, `run_tool` is a zero-overhead passthrough.
 
 ## Key Domain Concepts
 

@@ -238,6 +238,44 @@ To enable only certain tools, set the environment variable to a comma-separated 
 Example:
 MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_service"
 
+---
+
+### Observability (OpenTelemetry)
+
+The server emits one trace span per MCP tool call using [OpenTelemetry](https://opentelemetry.io/). Tracing is off by default and activates automatically when you set an OTLP endpoint.
+
+**Enable tracing:**
+
+```bash
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+```
+
+Each span includes:
+- `gen_ai.tool.name` — MCP tool name (e.g. `virtual_services_http_transaction`)
+- `mcp.tool.action` — action dispatched (e.g. `create_and_test`)
+- `error.type` — set on failure (`auth_error`, `not_found`, `rate_limited`, `server_error`, `api_error`)
+
+**W3C Trace Context propagation:** if your MCP client passes `traceparent`/`tracestate` in `_meta`, spans are linked to the parent trace automatically.
+
+**Install the SDK and OTLP exporter** (required to export spans — the API alone is a no-op):
+
+```bash
+# pip
+pip install "sv-mcp[telemetry]"
+
+# uvx — append the extra to the --from value
+uvx --from "git+https://github.com/Blazemeter/sv-mcp.git[telemetry]" sv-mcp
+```
+
+**Disable tracing entirely:**
+
+```bash
+export OTEL_SDK_DISABLED=true
+```
+
+The server never crashes if the endpoint is unreachable or the SDK is not installed.
+
+---
 
 ### **MCP Client Configuration using uvx (Recommended)**
 

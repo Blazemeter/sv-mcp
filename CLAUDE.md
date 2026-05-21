@@ -49,7 +49,11 @@ python sv_mcp/build.py
 **Docker:**
 ```bash
 docker build -t sv-mcp .
+# Basic run
 docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> sv-mcp
+# With OTel (SDK is bundled — just pass the endpoint)
+docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4318 sv-mcp
 ```
 
 ## Environment Variables
@@ -95,6 +99,8 @@ config/
 **Data flow:** MCP tool call → manager → `tools/utils.py` (httpx) → BlazeMeter API → formatter → Pydantic model → `BaseResult` response.
 
 **OTel instrumentation pattern:** every tool manager wraps its `match action:` block in an `async def _dispatch()` closure and calls `run_tool(tool_name, action, ctx, _dispatch)`. `run_tool` opens a span, awaits the closure, records errors, and re-raises — so existing `except` handlers are unchanged. When `opentelemetry-api` is absent or `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, `run_tool` is a zero-overhead passthrough.
+
+**SDK bundling:** the Docker image and standalone binary bundle `opentelemetry-sdk` + `opentelemetry-exporter-otlp` — tracing is activated by setting `OTEL_EXPORTER_OTLP_ENDPOINT` at runtime, no extra install step needed. For pip/uvx installs, add the `[telemetry]` extra.
 
 ## Key Domain Concepts
 

@@ -257,13 +257,34 @@ Each span includes:
 
 **W3C Trace Context propagation:** if your MCP client passes `traceparent`/`tracestate` in `_meta`, spans are linked to the parent trace automatically.
 
-**Install the SDK and OTLP exporter** (required to export spans — the API alone is a no-op):
+**SDK availability by deployment:**
+
+| Deployment | OTel SDK bundled | What you need |
+|---|---|---|
+| Docker image | ✅ Yes | Pass `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` at runtime |
+| Standalone binary | ✅ Yes | Set `OTEL_EXPORTER_OTLP_ENDPOINT` before running |
+| pip install | ❌ No | `pip install "sv-mcp[telemetry]"` then set env var |
+| uvx | ❌ No | Add `[telemetry]` extra to `--from` (see below) |
+
+**Docker:**
 
 ```bash
-# pip
-pip install "sv-mcp[telemetry]"
+docker run --rm -i \
+  -e API_KEY_ID=your_key_id \
+  -e API_KEY_SECRET=your_key_secret \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4318 \
+  sv-mcp
+```
 
-# uvx — append the extra to the --from value
+**pip:**
+
+```bash
+pip install "sv-mcp[telemetry]"
+```
+
+**uvx:**
+
+```bash
 uvx --from "git+https://github.com/Blazemeter/sv-mcp.git[telemetry]" sv-mcp
 ```
 
@@ -356,6 +377,8 @@ To pin a specific version or branch, change the `--from` value:
         "API_KEY_SECRET=your_api_key_secret",
         "-e",
         "SOURCE_WORKING_DIRECTORY=/tmp",
+        "-e",
+        "OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4318",
         "-v",
         "/host/path/to/your/test/files:/tmp",
         "us-docker.pkg.dev/verdant-bulwark-278/sv-mcp/sv-mcp:latest"

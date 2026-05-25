@@ -1,6 +1,6 @@
 [project]
 name = "sv-mcp"
-version = "1.0.5"
+version = "1.0.6"
 description = "Service Virtualization MCP"
 readme = "README.md"
 requires-python = ">=3.11,<3.14"

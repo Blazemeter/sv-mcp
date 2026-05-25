@@ -150,9 +150,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory. The id of the workspace.
                 name (str): Mandatory. The name of the virtual service.
                 serviceId (int): Mandatory. The id of the service to create the virtual service in.
-                harborId (str): Mandatory. The location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
-                shipId (str): Mandatory. The location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
-                endpointPreference (str): Mandatory. If not specified use 'HTTPS'.
+                harborId (str): Mandatory. The location harbor id. ALWAYS call virtual_services_location list first to get the correct harborId for the requested location.
+                shipId (str): Mandatory. The location ship id. ALWAYS call virtual_services_location list first to get the correct shipId for the requested location.
+                endpointPreference (str): Mandatory. Use 'HTTP' or 'HTTPS' as specified by the user.
                 noMatchingRequestPreference (str): Mandatory. If not specified use 'return404'.
         - update: Update an existing new virtual service.
             args(VirtualService): A virtual service object with the following fields:
@@ -160,9 +160,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 vs_id (int): Mandatory. The id of the virtual service.
                 name (str): Optional. The name of the virtual service.
                 serviceId (int): Optional. The id of the service to create the virtual service in.
-                harborId (str): Optional. The location harbor id. If user not specifies location use '5df144f7d778f066ba4d18d6'
-                shipId (str): Optional. The location ship id. If user not specifies location use '5df14527665b4a7c76267d44'
-                endpointPreference (str): Optional. If not specified use 'HTTPS'.
+                harborId (str): Optional. The location harbor id. Use virtual_services_location list to find the correct value.
+                shipId (str): Optional. The location ship id. Use virtual_services_location list to find the correct value.
+                endpointPreference (str): Optional. 'HTTP' or 'HTTPS' as specified by the user.
                 noMatchingRequestPreference (str): Optional. If not specified use 'return404'.
         - deploy: Deploy a virtual service. Deploys the virtual service to the specified harbor and ship.
             Action result contains tracking id to track the deployment. Use tracking tool to track the deployment.

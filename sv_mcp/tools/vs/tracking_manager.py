@@ -39,15 +39,17 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_tracking",
         description="""
-        Operations on tracking objects. 
-        Use this when a user needs to poll the tracking to understand job status or the asset upload status.
+        Operations on tracking objects.
+        Use this tool to read or poll tracking status by tracking ID (UUID).
+        Call this whenever you have a tracking ID and need to know the status or result of an async operation.
         Actions:
-        - read: Read a Tracking. Get the information of a tracking. Used for virtual service deploy/stop/configure tracking.
+        - read: Read a Tracking. Get status and result of a virtual service deploy/stop/configure operation.
             args(dict): Dictionary with the following required parameters:
-                tracking_id (str): Mandatory. The id of the tracking, must be a valid UUID.
-        - read_asset_tracking: Read an Asset Tracking. Get the information of a tracking. Used only for asset upload tracking.
+                tracking_id (str): Mandatory. The tracking UUID to read.
+        - read_asset_tracking: Read an Asset Tracking. Get the status and result of an asset upload operation.
+            Use this action — NOT `read` — when the tracking ID came from an asset upload (e.g. "read asset tracking info <uuid>").
             args(dict): Dictionary with the following required parameters:
-                tracking_id (str): Mandatory. The id of the tracking, must be a valid UUID.
+                tracking_id (str): Mandatory. The tracking UUID to read.
         Tracking Schema:
         """ + str(MasterTracking.model_json_schema())
     )

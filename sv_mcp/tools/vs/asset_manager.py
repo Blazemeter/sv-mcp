@@ -97,7 +97,7 @@ class AssetManager:
                 files=files)
             return result
         except Exception as e:
-            raise Exception(f"Failed to upload {file_path}: {str(e)}")
+            return BaseResult(error=f"Failed to upload {file_path}: {str(e)}")
 
 
 def register(mcp, token: Optional[BzmToken]) -> None:

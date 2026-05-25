@@ -62,11 +62,19 @@ async def _api_request(base_url: str,
                 total=total,
                 has_more=(total - (skip + limit)) > 0
             )
+        except httpx.HTTPStatusError as e:
+            try:
+                data = e.response.json()
+                server_msg = data.get("error") or data.get("message") or e.response.text
+            except Exception:
+                server_msg = e.response.text or str(e)
+            if e.response.status_code == 401:
+                return BaseResult(error=f"Invalid credentials: {server_msg}")
+            if e.response.status_code == 403:
+                return BaseResult(error=f"Access forbidden (check workspace permissions): {server_msg}")
+            return BaseResult(error=str(server_msg) or str(e))
         except httpx.HTTPError as e:
-            if e.response.status_code in (401, 403):
-                return BaseResult(error="Invalid credentials")
-            data = e.response.json()
-            return BaseResult(error=str(data.get("error")))
+            return BaseResult(error=f"HTTP error: {e}")
 
 # Thin wrappers
 async def bzm_api_request(token: Optional[BzmToken], method: str, endpoint: str,

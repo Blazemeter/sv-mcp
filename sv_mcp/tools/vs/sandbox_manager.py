@@ -24,13 +24,15 @@ class SandboxManager:
         parameters = {
             "transactionId": transaction_id
         }
-        return await vs_api_request(
+        result = await vs_api_request(
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_SANDBOX_ENDPOINT}",
             result_formatter=format_sandbox,
             params=parameters
         )
+        result.append_info(["Sandbox initialized. You MUST now call 'test_request' action with the HTTP request details to actually run the test."])
+        return result
 
     async def test_request(self, request: SandboxRequest, workspace_id: int) -> BaseResult:
         sandbox_request = {
@@ -52,17 +54,21 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         Testing HTTP transactions in sandbox.
         Use this for HTTP transaction verification, or to re-test an existing transaction after update.
         MESSAGING transactions are not supported in sandbox.
+        IMPORTANT: Testing a transaction in the sandbox ALWAYS requires two sequential tool calls:
+          1. Call `init` first — places the transaction into the sandbox environment.
+          2. Then call `test_request` — sends the actual HTTP request and returns the match result.
+        Both steps are mandatory. Calling only `init` does NOT test anything; you MUST follow it with `test_request`.
         Response fields: matched=true means the request was matched by the configured transaction.
         matched=false means no transaction matched — read mismatch_reasons to understand which
         matchers failed and what to fix in the DSL.
         Actions:
-        - init: Places transaction into sandbox.
+        - init: Places transaction into sandbox. Must be called BEFORE test_request.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace.
                 transaction_id (int): Mandatory. The id of the transaction to test.
-        - test_request: Sends test request to sandbox. 
+        - test_request: Sends test request to sandbox and returns match result. Must be called AFTER init.
             args(dict): Dictionary with the following required parameters:
-                request (SandboxRequest): Mandatory. The request definition.
+                request (SandboxRequest): Mandatory. The request definition (method, path, headers, body).
                 workspace_id (int): Mandatory. The id of the workspace.
         Sandbox Request Schema:
         """ + str(SandboxRequest.model_json_schema()) + """

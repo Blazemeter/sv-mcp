@@ -70,8 +70,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_service",
         description="""
-        Operations on services. 
-        Use this when a user needs to create or select a service.
+        Operations on services.
+        Use this when a user needs to create, read, update, list, or select a service.
         Actions:
         - read: Read a Service. Get the information of a service.
             args(dict): Dictionary with the following required parameters:

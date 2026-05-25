@@ -161,17 +161,19 @@ def register(mcp, token: Optional[BzmToken]) -> None:
     @mcp.tool(
         name=f"{VS_TOOLS_PREFIX}_virtual_service_template",
         description="""
-        Operations on virtual service templates. 
+        Operations on virtual service templates.
         Virtual service templates can only be used for the HTTP virtual services.
         Actions:
-        - read: Read a virtual service template. Get the information of a virtual service template.
+        - read: Get a SPECIFIC virtual service template by its id. Use this when you already have a template id.
+            Do NOT use `list` when you have a specific id — use `read` instead.
             args(dict): Dictionary with the following required parameters:
-                workspace_id (int): Mandatory. The id of the workspace to list virtual service templates from.
-                id (int): Mandatory. The id of the virtual service template to get information.
-        - list: List all virtual service templates. 
+                workspace_id (int): Mandatory. The id of the workspace.
+                id (int): Mandatory. The id of the virtual service template to read.
+        - list: List virtual service templates in a workspace. Use this to browse or discover templates.
+            Do NOT use `list` when you need a specific template by id — use `read` instead.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
-                serviceId (int): Optional. The id of the service to list virtual service templates from. 
+                serviceId (int): Optional. The id of the service to list virtual service templates from.
                 Without this it will list all virtual service templates in the workspace.
                 limit (int, default=10, valid=[1 to 50]): The number of virtual service templates to list.
                 offset (int, default=0): Number of virtual service templates to skip.
@@ -215,7 +217,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict):
                 id (int): Mandatory. The id of the Virtual Service Template.
                 asset_id (int): Mandatory. The id of the certificate asset to assign.
-                workspace_id (int): Mandatory. The id of the workspace.     
+                alias (str): Mandatory. The certificate alias to use.
+                workspace_id (int): Mandatory. The id of the workspace.
         VirtualServiceTemplate Schema (including full MockServiceTransaction):
         """ + str(VirtualServiceTemplate.model_json_schema())
     )

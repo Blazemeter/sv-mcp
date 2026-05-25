@@ -10,9 +10,8 @@ This is the **BlazeMeter Service Virtualization MCP Server** — a Python MCP se
 
 **Setup (uses `uv` package manager):**
 ```bash
-uv sync                         # production deps (includes opentelemetry-api)
+uv sync                         # production deps (includes OTel SDK + OTLP exporter)
 uv sync --extra dev             # includes pytest and pytest-asyncio for testing
-uv sync --extra telemetry       # adds OTel SDK + OTLP exporter for span export
 ```
 
 **Run the server:**
@@ -117,7 +116,7 @@ config/
 
 **OTel instrumentation pattern:** every tool manager wraps its `match action:` block in an `async def _dispatch()` closure and calls `run_tool(tool_name, action, ctx, _dispatch)`. `run_tool` opens a span, awaits the closure, records errors, and re-raises — so existing `except` handlers are unchanged. When `opentelemetry-api` is absent or `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, `run_tool` is a zero-overhead passthrough.
 
-**SDK bundling:** the Docker image and standalone binary bundle `opentelemetry-sdk` + `opentelemetry-exporter-otlp` — tracing is activated by setting `OTEL_EXPORTER_OTLP_ENDPOINT` at runtime, no extra install step needed. For pip/uvx installs, add the `[telemetry]` extra.
+**SDK bundling:** `opentelemetry-sdk` + `opentelemetry-exporter-otlp` are bundled in all install methods (pip, uvx, Docker, binary). Tracing is activated by setting `OTEL_EXPORTER_OTLP_ENDPOINT` at runtime — no extra install step needed.
 
 ## Key Domain Concepts
 

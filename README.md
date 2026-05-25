@@ -296,8 +296,8 @@ Each span includes:
 |---|---|---|
 | Docker image | ✅ Yes | Pass `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` at runtime |
 | Standalone binary | ✅ Yes | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
-| uvx | ✅ Yes (add `[telemetry]` extra) | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
-| pip install | ❌ No | `pip install "sv-mcp[telemetry]"` then set env var |
+| uvx | ✅ Yes | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
+| pip install | ✅ Yes | Set `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
 
 **Docker:**
 
@@ -312,13 +312,13 @@ docker run --rm -i \
 **pip:**
 
 ```bash
-pip install "sv-mcp[telemetry]"
+pip install sv-mcp
 ```
 
 **uvx:**
 
 ```bash
-uvx --from "git+https://github.com/Blazemeter/sv-mcp.git[telemetry]" sv-mcp \
+uvx --from "git+https://github.com/Blazemeter/sv-mcp.git" sv-mcp \
   --otel-endpoint http://your-collector:4318
 ```
 

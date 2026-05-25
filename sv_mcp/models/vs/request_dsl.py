@@ -10,8 +10,8 @@ class RequestDsl(BaseModel):
         'GET',
         description="HTTP method of the request for the transaction request matching. Uppercase, e.g., 'GET', 'POST'"
     )
-    path: str = Field(
-        ...,
+    path: Optional[str] = Field(
+        None,
         description="Mandatory.Path of the request for the transaction request matching. E.g., '/api/v1/resource'. Used instead of matcher_name for URL matcher definition. Important: Should have same value as url.matchingValue.",
     )
     url: MatcherDsl = Field(

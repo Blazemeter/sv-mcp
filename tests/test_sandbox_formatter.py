@@ -66,6 +66,21 @@ def test_formatter_multiple_mismatch_reasons():
     assert result[0].mismatch_reasons == ["Method mismatch", "Path mismatch"]
 
 
+def test_formatter_matched_when_matching_log_has_only_success_entries():
+    raw = [_make_raw(
+        body_text='{"id": 1}',
+        matching_log=[
+            {"t": 1000, "m": "Matching URL: equalTo /user"},
+            {"t": 1000, "m": "URL Matched"},
+            {"t": 1001, "m": "Matching Method: GET"},
+            {"t": 1001, "m": "Method Matched"},
+        ]
+    )]
+    result = format_sandbox_test_request(raw)
+    assert result[0].matched is True
+    assert result[0].mismatch_reasons == []
+
+
 def test_formatter_invalid_base64_falls_back_to_raw():
     raw = [{"status": 200, "statusMessage": "OK", "headers": [], "body": "not-valid-base64!!!", "matchingLog": []}]
     result = format_sandbox_test_request(raw)

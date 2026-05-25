@@ -38,9 +38,38 @@ class SandboxResponse(BaseModel):
     @model_validator(mode="after")
     def derive_match_fields(self) -> "SandboxResponse":
         log = self.matchingLog or []
-        self.matched = len(log) == 0
-        reasons = [entry.m for entry in log if entry.m]
-        self.mismatch_reasons = reasons if reasons else (["No match details available"] if log else [])
+        if not log:
+            self.matched = True
+            self.mismatch_reasons = []
+            return self
+
+        mismatch_entries = [
+            entry.m for entry in log
+            if entry.m and (
+                "not match" in entry.m.lower()
+                or "mismatch" in entry.m.lower()
+                or "no match" in entry.m.lower()
+            )
+        ]
+        if mismatch_entries:
+            self.matched = False
+            self.mismatch_reasons = mismatch_entries
+            return self
+
+        # Log has entries but no mismatch keywords. Check for explicit "X Matched" lines
+        # (the API pattern for a successful match). Anything else is a synthetic error entry.
+        has_api_match_entry = any(
+            entry.m
+            and entry.m.rstrip().endswith("Matched")
+            and "not" not in entry.m.lower()
+            for entry in log
+        )
+        if has_api_match_entry:
+            self.matched = True
+            self.mismatch_reasons = []
+        else:
+            self.matched = False
+            self.mismatch_reasons = [entry.m for entry in log if entry.m]
         return self
 
     class Config:

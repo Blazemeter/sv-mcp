@@ -1,5 +1,6 @@
 import logging
 import os
+import time
 from typing import Any, Callable, Awaitable
 
 import httpx
@@ -7,14 +8,20 @@ import httpx
 logger = logging.getLogger(__name__)
 
 try:
-    from opentelemetry import trace  # noqa: F401 — must be module-level for patching
+    from opentelemetry import trace, metrics  # noqa: F401 — must be module-level for patching
     _OTEL_API_AVAILABLE = True
 except ImportError:
     trace = None  # type: ignore[assignment]
+    metrics = None  # type: ignore[assignment]
     _OTEL_API_AVAILABLE = False
+
+_call_counter = None
+_duration_histogram = None
 
 
 def init_telemetry(service_name: str, service_version: str) -> None:
+    global _call_counter, _duration_histogram
+
     if not _OTEL_API_AVAILABLE:
         return
     if os.getenv("OTEL_SDK_DISABLED", "").lower() == "true":
@@ -33,10 +40,43 @@ def init_telemetry(service_name: str, service_version: str) -> None:
                 from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
                 provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
             except Exception:
-                logger.debug("OTLP exporter setup failed; traces will be discarded", exc_info=True)
+                logger.debug("OTLP trace exporter setup failed", exc_info=True)
 
         trace.set_tracer_provider(provider)
         logger.debug("OTel TracerProvider initialised (service=%s, version=%s)", service_name, service_version)
+
+        try:
+            from opentelemetry.sdk.metrics import MeterProvider
+            from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
+
+            readers = []
+            if endpoint:
+                try:
+                    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
+                    readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
+                except Exception:
+                    logger.debug("OTLP metric exporter setup failed", exc_info=True)
+
+            meter_provider = MeterProvider(resource=resource, metric_readers=readers)
+            metrics.set_meter_provider(meter_provider)
+
+            meter = metrics.get_meter("sv-mcp")
+            _call_counter = meter.create_counter(
+                "mcp.tool.calls",
+                unit="{call}",
+                description="Number of MCP tool calls",
+            )
+            _duration_histogram = meter.create_histogram(
+                "mcp.tool.duration",
+                unit="s",
+                description="MCP tool call duration in seconds",
+            )
+            logger.debug("OTel MeterProvider initialised")
+        except ImportError:
+            pass
+        except Exception:
+            logger.debug("OTel metrics init failed", exc_info=True)
+
     except ImportError:
         pass
     except Exception:
@@ -97,6 +137,17 @@ def _http_status_to_error_type(status_code: int) -> str:
     return f"http_{status_code}"
 
 
+def _record_metrics(tool_name: str, action: str, elapsed: float, outcome: str) -> None:
+    attrs = {"gen_ai.tool.name": tool_name, "mcp.tool.action": action, "error.type": outcome}
+    try:
+        if _call_counter is not None:
+            _call_counter.add(1, attrs)
+        if _duration_histogram is not None:
+            _duration_histogram.record(elapsed, attrs)
+    except Exception:
+        pass
+
+
 async def run_tool(
     tool_name: str,
     action: str,
@@ -134,17 +185,29 @@ async def run_tool(
         except Exception:
             pass
 
+        start = time.perf_counter()
+        error_type: str | None = None
+        result = None
         try:
             result = await dispatch()
         except httpx.TimeoutException:
-            _record_span_error(span, "timeout")
+            error_type = "timeout"
+            _record_span_error(span, error_type)
             raise
         except httpx.HTTPStatusError as e:
-            _record_span_error(span, _http_status_to_error_type(e.response.status_code))
+            error_type = _http_status_to_error_type(e.response.status_code)
+            _record_span_error(span, error_type)
             raise
         except Exception:
-            _record_span_error(span, "tool_error")
+            error_type = "tool_error"
+            _record_span_error(span, error_type)
             raise
+        finally:
+            elapsed = time.perf_counter() - start
+            outcome = error_type or (
+                "api_error" if result is not None and getattr(result, "error", None) else "ok"
+            )
+            _record_metrics(tool_name, action, elapsed, outcome)
 
         if result is not None and getattr(result, "error", None):
             _record_span_error(span, "api_error")

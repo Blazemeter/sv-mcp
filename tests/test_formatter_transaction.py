@@ -33,6 +33,13 @@ def test_format_http_transactions_missing_assets_key():
     assert result[0].assets == []
 
 
+def test_format_http_transactions_null_path():
+    fixture = load_fixture("transaction")["http"]
+    fixture[0]["dsl"]["requestDsl"]["path"] = None
+    result = format_http_transactions(fixture)
+    assert result[0].dsl.requestDsl.path is None
+
+
 def test_format_http_transactions_empty_list():
     assert format_http_transactions([]) == []
 

@@ -163,8 +163,33 @@ def main():
         help="Logging level"
     )
 
+    otel_group = parser.add_argument_group("telemetry", "OpenTelemetry settings (override env vars)")
+    otel_group.add_argument(
+        "--otel-endpoint",
+        metavar="URL",
+        help="OTLP collector endpoint URL (overrides OTEL_EXPORTER_OTLP_ENDPOINT)"
+    )
+    otel_group.add_argument(
+        "--otel-headers",
+        metavar="KEY=VALUE",
+        action="append",
+        help="OTLP header (repeatable, e.g. --otel-headers Authorization=Bearer\\ token); overrides OTEL_EXPORTER_OTLP_HEADERS"
+    )
+    otel_group.add_argument(
+        "--no-telemetry",
+        action="store_true",
+        help="Disable all OpenTelemetry tracing and metrics (sets OTEL_SDK_DISABLED=true)"
+    )
+
     args = parser.parse_args()
     init_logging(args.log_level)
+
+    if args.no_telemetry:
+        os.environ["OTEL_SDK_DISABLED"] = "true"
+    if args.otel_endpoint:
+        os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = args.otel_endpoint
+    if args.otel_headers:
+        os.environ["OTEL_EXPORTER_OTLP_HEADERS"] = ",".join(args.otel_headers)
 
     cli_mode = None
     if args.mcp:

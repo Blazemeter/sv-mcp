@@ -66,7 +66,13 @@ docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> \
 | `MCP_ENABLED_TOOLS` | Comma-separated tool names to enable (all enabled if unset) |
 | `MCP_DOCKER` | Set `true` when running in Docker |
 | `OTEL_EXPORTER_OTLP_ENDPOINT` | OTLP endpoint URL to enable span export (e.g. `http://localhost:4318`) |
+| `OTEL_EXPORTER_OTLP_HEADERS` | Comma-separated OTLP headers (e.g. `Authorization=Bearer token`) |
 | `OTEL_SDK_DISABLED` | Set `true` to disable all OTel tracing |
+
+CLI args set the corresponding env vars (CLI takes precedence):
+- `--otel-endpoint URL` → `OTEL_EXPORTER_OTLP_ENDPOINT`
+- `--otel-headers KEY=VALUE` (repeatable) → `OTEL_EXPORTER_OTLP_HEADERS`
+- `--no-telemetry` → `OTEL_SDK_DISABLED=true`
 
 ## Architecture
 

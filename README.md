@@ -244,10 +244,42 @@ MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_s
 
 The server emits one trace span per MCP tool call using [OpenTelemetry](https://opentelemetry.io/). Tracing is off by default and activates automatically when you set an OTLP endpoint.
 
-**Enable tracing:**
+**Enable tracing — environment variable:**
 
 ```bash
 export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+sv-mcp --mcp
+```
+
+**Enable tracing — CLI argument (binary / uvx):**
+
+```bash
+sv-mcp --mcp --otel-endpoint http://localhost:4318
+```
+
+The `--otel-endpoint` flag overrides `OTEL_EXPORTER_OTLP_ENDPOINT` when both are set.
+
+**Passing authentication headers:**
+
+```bash
+# env var (comma-separated key=value pairs)
+export OTEL_EXPORTER_OTLP_HEADERS="Authorization=Bearer your-token"
+
+# CLI flag (repeatable)
+sv-mcp --mcp \
+  --otel-endpoint http://your-collector:4318 \
+  --otel-headers "Authorization=Bearer your-token" \
+  --otel-headers "X-Dataset=sv-mcp"
+```
+
+**Disable tracing entirely:**
+
+```bash
+# env var
+export OTEL_SDK_DISABLED=true
+
+# CLI flag
+sv-mcp --mcp --no-telemetry
 ```
 
 Each span includes:
@@ -263,9 +295,9 @@ Each span includes:
 | Deployment | OTel SDK bundled | What you need |
 |---|---|---|
 | Docker image | ✅ Yes | Pass `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` at runtime |
-| Standalone binary | ✅ Yes | Set `OTEL_EXPORTER_OTLP_ENDPOINT` before running |
+| Standalone binary | ✅ Yes | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
+| uvx | ✅ Yes (add `[telemetry]` extra) | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
 | pip install | ❌ No | `pip install "sv-mcp[telemetry]"` then set env var |
-| uvx | ❌ No | Add `[telemetry]` extra to `--from` (see below) |
 
 **Docker:**
 
@@ -286,13 +318,8 @@ pip install "sv-mcp[telemetry]"
 **uvx:**
 
 ```bash
-uvx --from "git+https://github.com/Blazemeter/sv-mcp.git[telemetry]" sv-mcp
-```
-
-**Disable tracing entirely:**
-
-```bash
-export OTEL_SDK_DISABLED=true
+uvx --from "git+https://github.com/Blazemeter/sv-mcp.git[telemetry]" sv-mcp \
+  --otel-endpoint http://your-collector:4318
 ```
 
 The server never crashes if the endpoint is unreachable or the SDK is not installed.

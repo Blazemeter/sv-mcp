@@ -28,6 +28,9 @@ python sv_mcp/main.py --stateless
 
 # With log level
 python sv_mcp/main.py --mcp --log-level DEBUG
+
+# With inline credentials (highest priority, override env vars and api-key.json)
+python sv_mcp/main.py --http --api-key-id <id> --api-key-secret <secret>
 ```
 
 **Tests:**
@@ -61,7 +64,7 @@ docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> \
 | Variable | Description |
 |---|---|
 | `API_KEY_PATH` | Path to `api-key.json` with `{"id": "...", "secret": "..."}` |
-| `API_KEY_ID` / `API_KEY_SECRET` | Alternative to key file (used in Docker) |
+| `API_KEY_ID` / `API_KEY_SECRET` | Alternative to key file |
 | `MCP_MODE` | Override mode: `stdio`, `http`, `http-stateless` |
 | `MCP_ENABLED_TOOLS` | Comma-separated tool names to enable (all enabled if unset) |
 | `MCP_DOCKER` | Set `true` when running in Docker |
@@ -70,9 +73,17 @@ docker run -e API_KEY_ID=<id> -e API_KEY_SECRET=<secret> \
 | `OTEL_SDK_DISABLED` | Set `true` to disable all OTel tracing |
 
 CLI args set the corresponding env vars (CLI takes precedence):
+- `--api-key-id ID` → `API_KEY_ID`
+- `--api-key-secret SECRET` → `API_KEY_SECRET`
 - `--otel-endpoint URL` → `OTEL_EXPORTER_OTLP_ENDPOINT`
 - `--otel-headers KEY=VALUE` (repeatable) → `OTEL_EXPORTER_OTLP_HEADERS`
 - `--no-telemetry` → `OTEL_SDK_DISABLED=true`
+
+Credential resolution order (highest to lowest priority):
+1. `--api-key-id` / `--api-key-secret` CLI flags
+2. `api-key.json` next to the binary or in the current working directory
+3. `API_KEY_PATH` env var pointing to a JSON file
+4. `API_KEY_ID` / `API_KEY_SECRET` env vars
 
 ## Architecture
 

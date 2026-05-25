@@ -57,12 +57,13 @@ def init_logging(level_name: str) -> None:
     )
 
 
-def get_token():
+def get_token(api_key_id: str | None = None, api_key_secret: str | None = None):
     global BLAZEMETER_API_KEY_FILE_PATH
 
-    # Verify if running inside Docker container
-    is_docker = os.getenv('MCP_DOCKER', 'false').lower() == 'true'
     token = None
+
+    if api_key_id and api_key_secret:
+        return BzmToken(api_key_id, api_key_secret)
 
     local_api_key_file = os.path.join(os.path.dirname(__executable__), "api-key.json")
     cwd_api_key_file = os.path.join(os.getcwd(), "api-key.json")
@@ -76,12 +77,10 @@ def get_token():
         try:
             token = BzmToken.from_file(BLAZEMETER_API_KEY_FILE_PATH)
         except BzmTokenError:
-            # Token file exists but is invalid - this will be handled by individual tools
             pass
         except Exception:
-            # Other errors (file not found, permissions, etc.) - also handled by tools
             pass
-    elif is_docker:
+    elif os.getenv('API_KEY_ID') and os.getenv('API_KEY_SECRET'):
         token = BzmToken(os.getenv('API_KEY_ID'), os.getenv('API_KEY_SECRET'))
     return token
 
@@ -156,6 +155,10 @@ def main():
     parser.add_argument("--http", action="store_true", help="Execute MCP Server in HTTP mode")
     parser.add_argument("--stateless", action="store_true", help="Execute MCP Server in HTTP stateless mode")
 
+    auth_group = parser.add_argument_group("authentication", "API credentials (override env vars and api-key.json)")
+    auth_group.add_argument("--api-key-id", metavar="ID", help="BlazeMeter API key ID (overrides API_KEY_ID)")
+    auth_group.add_argument("--api-key-secret", metavar="SECRET", help="BlazeMeter API key secret (overrides API_KEY_SECRET)")
+
     parser.add_argument(
         "--log-level",
         default="DEBUG",
@@ -208,7 +211,12 @@ def main():
     else:
         effective_mode = "stdio"
 
-    token_preview = get_token()
+    if args.api_key_id:
+        os.environ["API_KEY_ID"] = args.api_key_id
+    if args.api_key_secret:
+        os.environ["API_KEY_SECRET"] = args.api_key_secret
+
+    token_preview = get_token(args.api_key_id, args.api_key_secret)
     if getattr(sys, 'frozen', False) or (effective_mode == "stdio" and sys.stdin.isatty()):
         print_banner(mode=effective_mode, token_loaded=token_preview is not None)
 

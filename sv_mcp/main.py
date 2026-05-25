@@ -179,9 +179,19 @@ def main():
     else:
         effective_mode = "stdio"
 
-    if getattr(sys, 'frozen', False):
-        token_preview = get_token()
+    token_preview = get_token()
+    if getattr(sys, 'frozen', False) or (effective_mode == "stdio" and sys.stdin.isatty()):
         print_banner(mode=effective_mode, token_loaded=token_preview is not None)
+
+    if effective_mode == "stdio" and sys.stdin.isatty():
+        print(
+            "  stdin is a terminal — the MCP STDIO transport expects a client to speak\n"
+            "  the MCP protocol over stdin/stdout. Run with --http or --stateless for\n"
+            "  a standalone HTTP server, or configure your MCP client to launch this\n"
+            "  process (e.g. Claude Desktop, Cursor).\n",
+            file=sys.stderr,
+        )
+        sys.exit(0)
 
     if effective_mode == "stdio":
         logging.disable(logging.CRITICAL)

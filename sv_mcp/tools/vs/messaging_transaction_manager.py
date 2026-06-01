@@ -1,6 +1,6 @@
 import base64
 import traceback
-from typing import Optional, Dict, Any, Annotated
+from typing import Optional, Dict, Any, Annotated, List
 
 import httpx
 from mcp.server.fastmcp import Context
@@ -30,7 +30,9 @@ class MessagingTransactionManager:
             result_formatter=format_messaging_transactions
         )
 
-    async def list(self, workspace_id: int, service_id: int, limit: int = 50, offset: int = 0) -> BaseResult:
+    async def list(self, workspace_id: int, service_id: Optional[int] = None,
+                   limit: int = 50, offset: int = 0,
+                   service_mock_id: Optional[int] = None) -> BaseResult:
         parameters = {
             "limit": limit,
             "skip": offset,
@@ -38,6 +40,8 @@ class MessagingTransactionManager:
         }
         if service_id is not None:
             parameters["serviceId"] = service_id
+        if service_mock_id is not None:
+            parameters["serviceMockId"] = service_mock_id
         return await vs_api_request(
             self.token,
             "GET",
@@ -45,14 +49,17 @@ class MessagingTransactionManager:
             result_formatter=format_messaging_transactions,
             params=parameters)
 
-    async def create(self, transaction_name: str, workspace_id: int, service_id, type: str,
-                     dsl: MessagingTransaction, delay: int) -> BaseResult:
-        # Convert MessagingDsl to dict for JSON serialization
-        dsl_dict = dsl.model_dump() if isinstance(dsl, MessagingTransaction) else dsl
+    async def create(self, transaction_name: str, workspace_id: int, service_id: int,
+                     type: str, dsl, delay: Optional[int],
+                     description: Optional[str] = None,
+                     tags: Optional[List[str]] = None,
+                     priority: Optional[int] = None,
+                     messaging_transaction_mappings: Optional[dict] = None,
+                     sample_body: Optional[str] = None) -> BaseResult:
+        dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
         request = dsl_dict.get("requestDsl")
         if request:
-            body_list = request.get("body", [])
-            for body_matcher in body_list:
+            for body_matcher in request.get("body", []):
                 value = body_matcher.get("matchingValue")
                 if value is not None:
                     body_matcher["matchingValue"] = MessagingTransactionManager.to_base64(value)
@@ -63,16 +70,23 @@ class MessagingTransactionManager:
                     "type": "FIXED",
                     "duration": delay
                 }
-        transaction_body = {
-            "transactions": [
-                {
-                    "serviceId": service_id,
-                    "type": type,
-                    "dsl": dsl_dict,  # Use the dict version
-                    "name": transaction_name,
-                }
-            ]
+        txn: Dict[str, Any] = {
+            "serviceId": service_id,
+            "type": type,
+            "dsl": dsl_dict,
+            "name": transaction_name,
         }
+        if description is not None:
+            txn["description"] = description
+        if tags is not None:
+            txn["tags"] = tags
+        if priority is not None:
+            txn["priority"] = priority
+        if messaging_transaction_mappings is not None:
+            txn["messagingTransactionMappings"] = messaging_transaction_mappings
+        if sample_body is not None:
+            txn["sampleBody"] = sample_body
+        transaction_body = {"transactions": [txn]}
         parameters = {
             "serviceId": service_id,
         }
@@ -85,23 +99,37 @@ class MessagingTransactionManager:
             params=parameters
         )
 
-    async def update(self, id: int, transaction_name: str, workspace_id: int, type: str,
-                     dsl: MessagingTransaction, delay: int) -> BaseResult:
-        # Convert MessagingDsl to dict for JSON serialization
-        dsl_dict = dsl.model_dump() if isinstance(dsl, MessagingTransaction) else dsl
+    async def update(self, id: int, transaction_name: str, workspace_id: int,
+                     type: str, dsl, delay: Optional[int],
+                     description: Optional[str] = None,
+                     tags: Optional[List[str]] = None,
+                     priority: Optional[int] = None,
+                     messaging_transaction_mappings: Optional[dict] = None,
+                     sample_body: Optional[str] = None) -> BaseResult:
+        dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
 
-        transaction_body = {
+        body: Dict[str, Any] = {
             "id": id,
             "type": type,
             "dsl": dsl_dict,
-            "name": transaction_name
+            "name": transaction_name,
         }
+        if description is not None:
+            body["description"] = description
+        if tags is not None:
+            body["tags"] = tags
+        if priority is not None:
+            body["priority"] = priority
+        if messaging_transaction_mappings is not None:
+            body["messagingTransactionMappings"] = messaging_transaction_mappings
+        if sample_body is not None:
+            body["sampleBody"] = sample_body
         return await vs_api_request(
             self.token,
             "PUT",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}",
             result_formatter=format_messaging_transactions,
-            json=transaction_body
+            json=body
         )
 
     async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
@@ -304,11 +332,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
                 id (int): Mandatory. The id of the transaction to get information.
-        - list: List all transactions. 
+        - list: List all transactions.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace to list transactions from.
                 serviceId (int): Optional. The id of the service to list transactions from. Without this it will list all transactions in the workspace.
-                virtual_service_id (int): Optional. The id of the virtual service to list transactions from. Without this it will list all transactions in the workspace.
+                virtual_service_id (int): Optional. Filter by virtual service (messaging service mock) id.
                 limit (int, default=10, valid=[1 to 50]): The number of transactions to list.
                 offset (int, default=0): Number of transactions to skip.
         - validate_template: Validates template used in transaction definition.
@@ -328,6 +356,11 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 dsl (MessagingDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace.
                 delay (int): Optional. Response delay in milliseconds.
+                description (str): Optional.
+                tags (list[str]): Optional.
+                priority (int): Optional. Matching priority 1–2147483647, default 10.
+                messagingTransactionMappings (dict): Optional. {sourceName, sourceType, destinations: [{destinationName, destinationType}]}.
+                sampleBody (str): Optional. Example request body for documentation.
         - update: Updates a certain transaction.
             Important: before using template in transaction definition validate it and  
             convert it first using validate_template and convert_template actions.
@@ -336,8 +369,13 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 name (str): Mandatory. The new name of the transaction.
                 type (str): Mandatory. The type of the transaction.
                 dsl (MessagingDsl): Mandatory. The DSL definition of the transaction.
-                workspace_id (int): Mandatory. The id of the workspace. 
+                workspace_id (int): Mandatory. The id of the workspace.
                 delay (int): Optional. Response delay in milliseconds.
+                description (str): Optional.
+                tags (list[str]): Optional.
+                priority (int): Optional. Matching priority 1–2147483647, default 10.
+                messagingTransactionMappings (dict): Optional. {sourceName, sourceType, destinations: [{destinationName, destinationType}]}.
+                sampleBody (str): Optional. Example request body for documentation.
         - assign_keystore: Assign keystore asset to the transaction.
             args(dict):
                 id (int): Mandatory. The id of the transaction.
@@ -370,16 +408,27 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         args.get("serviceId"),
                         args.get("limit", 50),
                         args.get("offset", 0),
+                        service_mock_id=args.get("virtual_service_id"),
                     )
                 case "create":
                     return await transaction_manager.create(
                         args["name"], args["workspace_id"], args["serviceId"],
                         args["type"], args["dsl"], args.get("delay", None),
+                        description=args.get("description"),
+                        tags=args.get("tags"),
+                        priority=args.get("priority"),
+                        messaging_transaction_mappings=args.get("messagingTransactionMappings"),
+                        sample_body=args.get("sampleBody"),
                     )
                 case "update":
                     return await transaction_manager.update(
                         args["id"], args["name"], args["workspace_id"],
                         args["type"], args["dsl"], args.get("delay", None),
+                        description=args.get("description"),
+                        tags=args.get("tags"),
+                        priority=args.get("priority"),
+                        messaging_transaction_mappings=args.get("messagingTransactionMappings"),
+                        sample_body=args.get("sampleBody"),
                     )
                 case "validate_template":
                     return await transaction_manager.validate_template(args["template"])

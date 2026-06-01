@@ -119,6 +119,7 @@ class RecordingManager:
             description: Optional[str] = None,
             tags: Optional[List[str]] = None,
             messages: Optional[List[dict]] = None,
+            runtime_config: Optional[dict] = None,
     ) -> BaseResult:
         body: Dict[str, Any] = {}
         if name is not None:
@@ -131,6 +132,8 @@ class RecordingManager:
             body["tags"] = tags
         if messages is not None:
             body["messages"] = messages
+        if runtime_config is not None:
+            body["runtimeConfig"] = runtime_config
         return await vs_api_request(
             self.token, "PATCH", self._recording_url(workspace_id, recording_id),
             result_formatter=format_recordings, json=body
@@ -247,6 +250,7 @@ class RecordingManager:
             correlation_id: Optional[str] = None,
             headers: Optional[List[dict]] = None,
             properties: Optional[List[dict]] = None,
+            recorded_at: Optional[str] = None,
     ) -> BaseResult:
         body: Dict[str, Any] = {}
         if message_type is not None:
@@ -269,6 +273,8 @@ class RecordingManager:
             body["headers"] = headers
         if properties is not None:
             body["properties"] = properties
+        if recorded_at is not None:
+            body["recordedAt"] = recorded_at
         return await vs_api_request(
             self.token, "PATCH", self._message_url(workspace_id, recording_id, message_id),
             result_formatter=format_recorded_messages, json=body
@@ -324,6 +330,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 description (str): Optional.
                 tags (list[str]): Optional.
                 messages (list): Optional.
+                runtimeConfig (dict): Optional. {replayCount, delayBetweenReplays, initialDelay}.
 
         ## Recorded message actions
 
@@ -375,6 +382,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 correlationId (str): Optional.
                 headers (list): Optional.
                 properties (list): Optional.
+                recordedAt (str): Optional. ISO-8601 timestamp.
 
         Recording schema:
         """ + str(Recording.model_json_schema()) + """
@@ -434,6 +442,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         description=args.get("description"),
                         tags=args.get("tags"),
                         messages=args.get("messages"),
+                        runtime_config=args.get("runtimeConfig"),
                     )
                 case "list_messages":
                     return await mgr.list_messages(
@@ -490,6 +499,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                         correlation_id=args.get("correlationId"),
                         headers=args.get("headers"),
                         properties=args.get("properties"),
+                        recorded_at=args.get("recordedAt"),
                     )
                 case _:
                     return BaseResult(error=f"Action {action} not found in recording manager tool")

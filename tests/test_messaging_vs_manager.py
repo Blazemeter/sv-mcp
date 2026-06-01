@@ -61,3 +61,39 @@ async def test_create_mq9_alias_delegates(manager):
     kwargs = manager.create.call_args.kwargs
     assert kwargs["messaging_protocol"] == "IBM_MQ9_JMS"
     assert kwargs["broker_config"]["channel"] == "SYSTEM.DEF.SVRCONN"
+
+
+async def test_update_generic(manager):
+    with patch("sv_mcp.tools.vs.messaging_virtual_service_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.update(
+            workspace_id=1,
+            vs_id=10,
+            name="updated-vs",
+            messaging_protocol="ACTIVE_MQ_ARTEMIS",
+            broker_config={"hostname": "artemis.host", "port": "61616"},
+        )
+    call = mock_req.call_args
+    assert call.args[1] == "PATCH"
+    body = call.kwargs["json"]
+    assert body["name"] == "updated-vs"
+    assert body["messagingProtocol"] == "ACTIVE_MQ_ARTEMIS"
+    # Unset optional fields must NOT appear in the body
+    assert "priorityMode" not in body
+    assert "recorderConfig" not in body
+
+
+async def test_update_mq9_alias_delegates(manager):
+    manager.update = AsyncMock(return_value=BaseResult(result=[]))
+    await manager.update_mq9(
+        workspace_id=1, vs_id=10,
+        vs_name="vs", service_id=None, harborId=None, shipId=None,
+        mock_service_transactions=None,
+        mq9_broker_hostname="mq.host", mq9_broker_port=1414,
+        mq9_broker_channel="SYSTEM.DEF.SVRCONN",
+        mq9_queue_manager="QM1", mq9_queue_username="admin", mq9_queue_password="pass",
+    )
+    manager.update.assert_awaited_once()
+    kwargs = manager.update.call_args.kwargs
+    assert kwargs["messaging_protocol"] == "IBM_MQ9_JMS"
+    assert kwargs["broker_config"]["queueManager"] == "QM1"

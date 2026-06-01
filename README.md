@@ -14,6 +14,8 @@ to deploying it to the virtual service. All through natural language interaction
 - **Location Management**: List available locations.
 - **Configuration Management**: Create and manage configurations for virtual services.
 - **Virtual Service Management**: Create, modify, deploy, stop a virtual service, track its status.
+- **Messaging Virtual Service Management**: Create, deploy, and manage messaging virtual services across IBM MQ, ActiveMQ, and Kafka brokers.
+- **Recording Management**: Capture live broker traffic into recordings and replay them via messaging virtual services.
 - **Virtual Service Templates Management**: Create, modify, create from the virtual service, apply to a virtual service.
 - **Test Data Management**: Create, update, and read TDM datasets for virtual services to drive data-driven transaction matching.
 
@@ -48,6 +50,8 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | **Action**                   | Action Management                   | Create, manage and transactions actions               |
 | **Virtual service**          | Virtual Service Management          | Create, manage, deploy, stop virtual services         |
 | **Virtual service template** | Virtual Service Template Management | Create, manage, apply to the virtual service          |
+| **Messaging Virtual Service**| Messaging Virtual Service Management| Create, manage, deploy messaging virtual services for IBM MQ, ActiveMQ, Kafka |
+| **Recording**                | Recording Management                | Create, manage recordings and recorded messages for messaging virtual services |
 | **Asset**                    | Asset Management                    | Upload assets                                         |
 | **Configuration**            | Configuration Management            | Create, manage configurations                         |
 | **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                      |
@@ -117,14 +121,15 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 
 | Action                             | What you get                                                  |
 |------------------------------------|---------------------------------------------------------------|
-| Read an Messaging Transaction      | Reads Messaging Transaction details                           |
-| Create a new Messaging transaction | Creates a new Messaging transaction                           |
+| Read a Messaging Transaction       | Reads Messaging Transaction details                           |
+| Create a new Messaging transaction | Creates a new Messaging transaction with optional priority, tags, source/destination mapping, and sample body |
 | Update Messaging transaction       | Updates existing Messaging transaction                        |
-| List all Messaging transactions    | Lists all Messaging transactions in a workspace or service    |
+| List all Messaging transactions    | Lists all Messaging transactions in a workspace, service, or messaging virtual service |
 | Validate template                  | Validates handlebars template                                 |
 | Convert template                   | Safely converts handlebars template to VS format              |
 | Assign keystore                    | Assign keystore asset to an existing Messaging transaction    |
 | Assign certificate                 | Assign certificate asset to an existing Messaging transaction |
+
 ---
 
 ### **Action Management**
@@ -199,18 +204,69 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Read a Virtual Service         | Reads Virtual Service details                                                             |
 | Create a new Virtual Service   | Creates a new Virtual Service with enabled HTTP runner                                    |
 | Update Virtual Service         | Updates existing Virtual Service                                                          |
-| List all Virtual services      | Lists all Virtual Services in a workspace or service                                      |
+| List all Virtual Services      | Lists all Virtual Services in a workspace or service                                      |
 | Deploy Virtual Service         | Starts Virtual Service container                                                          |
 | Configure Virtual Service      | Updates running Virtual Service                                                           |
 | Stop Virtual Service           | Stops Virtual Service container                                                           |
-| Assign trasnactions            | Assigns transactions to the Virtual Service                                               |
-| Unassign trasnactions          | Unassigns transactions from the Virtual Service                                           |
+| Assign transactions            | Assigns transactions to the Virtual Service                                               |
+| Unassign transactions          | Unassigns transactions from the Virtual Service                                           |
 | Assign configuration           | Assigns configuration to the Virtual Service                                              |
 | Apply Virtual Service Template | Applies Virtual Service Template settings to the Virtual Service                          |
 | Set Proxy                      | Adds proxy settings to the Virtual Service                                                |
 | Unset Proxy                    | Removes proxy settings from the Virtual Service                                           |
 | Assign Keystore                | Assigns keystore asset to the Virtual Service                                             |
 | Assign Keystore + Truststore   | Assigns keystore asset to the Virtual Service, to be used as both Keystore and Truststore |
+
+---
+
+### **Messaging Virtual Service Management**
+**What it does:** Create, manage, deploy, stop messaging virtual services. Supports IBM MQ (JMS and Native), ActiveMQ Classic, ActiveMQ Artemis, and Kafka brokers.
+
+| Action                    | What you get                                                                                      |
+|---------------------------|---------------------------------------------------------------------------------------------------|
+| Read a Virtual Service    | Reads Messaging Virtual Service details including broker config and protocol                      |
+| Create a Virtual Service  | Creates a Messaging Virtual Service for any supported protocol with full broker configuration     |
+| Update a Virtual Service  | Partially updates a Messaging Virtual Service (only provided fields change)                       |
+| List all Virtual Services | Lists all Messaging Virtual Services in a workspace or service                                    |
+| Deploy Virtual Service    | Starts Messaging Virtual Service container                                                        |
+| Stop Virtual Service      | Stops Messaging Virtual Service container                                                         |
+| Configure Virtual Service | Hot-reloads transactions into a running Messaging Virtual Service                                 |
+| Assign transactions       | Assigns transactions to the Messaging Virtual Service                                             |
+| Unassign transactions     | Unassigns transactions from the Messaging Virtual Service                                         |
+| Assign recordings         | Assigns recordings to the Messaging Virtual Service for replay                                    |
+| Unassign recordings       | Unassigns recordings from the Messaging Virtual Service                                           |
+| Assign configuration      | Assigns configuration to the Messaging Virtual Service                                            |
+| Set Proxy                 | Adds proxy settings to the Messaging Virtual Service                                              |
+| Unset Proxy               | Removes proxy settings from the Messaging Virtual Service                                         |
+| Assign queue              | Assigns a queue to the Messaging Virtual Service                                                  |
+| Assign topic              | Assigns a topic to the Messaging Virtual Service                                                  |
+
+**Supported protocols and required broker config fields:**
+
+| Protocol           | hostname | port | channel | queueManager | username | password | SSL | Embedded broker | Kafka-specific |
+|--------------------|----------|------|---------|--------------|----------|----------|-----|-----------------|----------------|
+| IBM_MQ9_JMS        | ✓        | ✓    | ✓       | ✓            | ✓        | ✓        | ✓   | —               | —              |
+| IBM_MQ9_NATIVE     | ✓        | ✓    | ✓       | ✓            | ✓        | ✓        | ✓   | —               | —              |
+| ACTIVE_MQ_CLASSIC  | ✓        | ✓    | —       | —            | ✓        | ✓        | opt | ✓               | —              |
+| ACTIVE_MQ_ARTEMIS  | ✓        | ✓    | —       | —            | ✓        | ✓        | opt | ✓               | —              |
+| KAFKA              | ✓        | ✓    | —       | —            | opt      | opt      | opt | —               | autoOffsetReset, numPartitions |
+
+---
+
+### **Recording Management**
+**What it does:** Creates and manages recordings of live broker traffic. Recordings can be attached to messaging virtual services for replay.
+
+| Action               | What you get                                                                            |
+|----------------------|-----------------------------------------------------------------------------------------|
+| List recordings      | Lists all recordings in a workspace, optionally filtered by service or virtual service  |
+| Read a recording     | Reads recording details including inline messages                                       |
+| Create a recording   | Creates a new recording with optional runtime config (replayCount, delays)              |
+| Update a recording   | Full replacement of a recording                                                         |
+| Patch a recording    | Partial update — only provided fields change                                            |
+| List messages        | Lists recorded messages within a recording, sorted by index                             |
+| Create message       | Adds a recorded message to a recording (base64-encoded content)                         |
+| Update message       | Full replacement of a recorded message                                                  |
+| Patch message        | Partial update of a recorded message                                                    |
 
 ---
 ### **Virtual Service Template Management**
@@ -222,8 +278,8 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Create a new Virtual Service Template | Creates a new Virtual Service Template                                                             |
 | Update Virtual Service Template       | Updates existing Virtual Service Template                                                          |
 | List all Virtual Service Templates    | Lists all Virtual Service Templates in a workspace or service                                      | |
-| Assign trasnactions                   | Assigns transactions to the Virtual Service Template                                               |
-| Unassign trasnactions                 | Unassigns transactions from the Virtual Service Template                                           |
+| Assign transactions                   | Assigns transactions to the Virtual Service Template                                               |
+| Unassign transactions                 | Unassigns transactions from the Virtual Service Template                                           |
 | Assign configuration                  | Assigns configuration to the Virtual Service Template                                              |
 | Assign Keystore                       | Assigns keystore asset to the Virtual Service Template                                             |
 | Assign Keystore + Truststore          | Assigns keystore asset to the Virtual Service Template, to be used as both Keystore and Truststore |

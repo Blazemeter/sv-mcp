@@ -53,3 +53,40 @@ def test_format_virtual_services_action():
     result = format_virtual_services_action(raw)
     assert len(result) == 1
     assert result[0].tracking_id == "uuid-track-001"
+
+
+def test_format_virtual_service_messaging_protocol():
+    fixture = load_fixture("virtual_service")
+    fixture[0]["messagingProtocol"] = "ACTIVE_MQ_CLASSIC"
+    result = format_virtual_services(fixture)
+    assert result[0].messagingProtocol == "ACTIVE_MQ_CLASSIC"
+
+
+def test_format_virtual_service_recorder_config():
+    fixture = load_fixture("virtual_service")
+    fixture[0]["recorderConfig"] = {
+        "maxMessagesCount": 500,
+        "maxMessagesPerSecondCount": 50,
+        "mappings": [{"inboundDestination": "IN.Q", "outboundDestination": "OUT.Q", "originType": "QUEUE"}],
+    }
+    result = format_virtual_services(fixture)
+    rc = result[0].recorderConfig
+    assert rc.maxMessagesCount == 500
+    assert rc.mappings[0].originType == "QUEUE"
+
+
+def test_format_virtual_service_mock_recordings():
+    fixture = load_fixture("virtual_service")
+    fixture[0]["mockServiceRecordings"] = [{"recordingId": 99, "runtimeConfig": {"replayCount": 3}}]
+    result = format_virtual_services(fixture)
+    mr = result[0].mockServiceRecordings
+    assert len(mr) == 1
+    assert mr[0].recordingId == 99
+    assert mr[0].runtimeConfig.replayCount == 3
+
+
+def test_format_virtual_service_priority_mode():
+    fixture = load_fixture("virtual_service")
+    fixture[0]["priorityMode"] = "ROUND_ROBIN"
+    result = format_virtual_services(fixture)
+    assert result[0].priorityMode == "ROUND_ROBIN"

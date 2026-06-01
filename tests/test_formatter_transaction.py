@@ -62,3 +62,42 @@ def test_format_messaging_transactions_dsl_parsed():
 
 def test_format_messaging_transactions_empty_list():
     assert format_messaging_transactions([]) == []
+
+
+def test_format_messaging_transactions_response_message_type():
+    fixture = load_fixture("transaction")
+    fixture["messaging"][0]["dsl"]["responseDsl"]["messageType"] = "BYTES_MESSAGE"
+    result = format_messaging_transactions(fixture["messaging"])
+    assert result[0].dsl.responseDsl.messageType == "BYTES_MESSAGE"
+
+
+def test_format_messaging_transactions_response_delay():
+    fixture = load_fixture("transaction")
+    fixture["messaging"][0]["dsl"]["responseDsl"]["responseDelay"] = {
+        "type": "FIXED", "fixedDelay": 150
+    }
+    result = format_messaging_transactions(fixture["messaging"])
+    assert result[0].dsl.responseDsl.responseDelay.fixedDelay == 150
+
+
+def test_format_messaging_transactions_transaction_mapping():
+    from sv_mcp.models.vs.broker_configuration import MessagingTransactionMapping
+    fixture = load_fixture("transaction")
+    fixture["messaging"][0]["messagingTransactionMappings"] = {
+        "sourceName": "ORDER.IN",
+        "sourceType": "QUEUE",
+        "destinations": [{"destinationName": "ORDER.OUT", "destinationType": "QUEUE"}],
+    }
+    result = format_messaging_transactions(fixture["messaging"])
+    tm = result[0].messagingTransactionMappings
+    assert tm.sourceName == "ORDER.IN"
+    assert tm.destinations[0].destinationName == "ORDER.OUT"
+
+
+def test_format_messaging_transactions_tags_and_priority():
+    fixture = load_fixture("transaction")
+    fixture["messaging"][0]["tags"] = ["billing", "v2"]
+    fixture["messaging"][0]["priority"] = 5
+    result = format_messaging_transactions(fixture["messaging"])
+    assert result[0].tags == ["billing", "v2"]
+    assert result[0].priority == 5

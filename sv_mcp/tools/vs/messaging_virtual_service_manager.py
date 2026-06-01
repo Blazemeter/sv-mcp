@@ -198,6 +198,26 @@ class MessagingVirtualServiceManager(BaseVirtualServiceManager):
             mock_service_transactions=mock_service_transactions,
         )
 
+    async def assign_recordings(self, workspace_id: int, vs_id: int, recording_ids: List[int]) -> BaseResult:
+        vs_body = {"includeRecordingIds": recording_ids}
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}",
+            result_formatter=format_virtual_services,
+            json=vs_body,
+        )
+
+    async def unassign_recordings(self, workspace_id: int, vs_id: int, recording_ids: List[int]) -> BaseResult:
+        vs_body = {"excludeRecordingIds": recording_ids}
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}",
+            result_formatter=format_virtual_services,
+            json=vs_body,
+        )
+
     async def assign_queue(self, id: int, workspace_id: int, queue_name: str) -> BaseResult:
         return await vs_api_request(
             self.token,
@@ -314,6 +334,16 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 workspace_id (int): Mandatory.
                 id (int): Mandatory.
                 transaction_ids (list[int]): Mandatory.
+        - assign_recordings: Assign recordings to a messaging virtual service.
+            args:
+                workspace_id (int): Mandatory.
+                id (int): Mandatory.
+                recording_ids (list[int]): Mandatory. IDs of recordings to assign.
+        - unassign_recordings: Unassign recordings from a messaging virtual service.
+            args:
+                workspace_id (int): Mandatory.
+                id (int): Mandatory.
+                recording_ids (list[int]): Mandatory. IDs of recordings to unassign.
         - assign_configuration: Assign a configuration to a virtual service.
             args:
                 workspace_id (int): Mandatory.
@@ -443,6 +473,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "unassign_transactions":
                     return await vs_manager.unassign_transactions(
                         args["workspace_id"], args["id"], args["transaction_ids"]
+                    )
+                case "assign_recordings":
+                    return await vs_manager.assign_recordings(
+                        args["workspace_id"], args["id"], args["recording_ids"]
+                    )
+                case "unassign_recordings":
+                    return await vs_manager.unassign_recordings(
+                        args["workspace_id"], args["id"], args["recording_ids"]
                     )
                 case "assign_configuration":
                     return await vs_manager.assign_configuration(

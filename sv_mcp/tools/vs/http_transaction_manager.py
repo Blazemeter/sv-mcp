@@ -249,6 +249,19 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             - Each helper must have exactly one opening and one closing brace; do not add extra # or braces.
             - Use handlebars helpers supported by wiremock, specified in https://wiremock.org/docs/response-templating/
             - Use validate_template and convert_template actions to validate and convert templates before using them in transaction definition.
+            - Dataset variables (from virtual_services_test_data) are referenced with ${fieldName} syntax, NOT Handlebars.
+              Matcher name rules — MUST follow exactly:
+                * URL path with ${fieldName}: matcherName MUST be "equals_url". NEVER use "matches_url" with variables.
+                * Headers / query params / cookies: matcherName must be "equals" or "equals_insensitive" only.
+                  "contains", "matches", "not_matches" do NOT work with dataset variables.
+                * Body plain text: matcherName "equals"
+                * Body JSON: matcherName "equals_json" (embed as value e.g. {"id": "${id}"})
+                  or "matches_json" with equalTo() e.g. [[$.field, equalTo(${id})]]
+                * Body XML: matcherName "equals_xml" or "matches_xml" with matching() helper
+                * Response content: base64-encode the string containing ${fieldName} — resolves at runtime.
+              Extra rules:
+                * Same variable used multiple times (path + header + body) must match the SAME value in the request.
+                * Undefined variables are treated as literal strings — request must contain the exact text "${varName}".
             - IMPORTANT: When a transaction DSL contains Handlebars templates, always use
               create_and_test instead of create. A transaction is only complete when sandbox
               returns matched=true for all test cases. If matched=false, read mismatch_reasons,

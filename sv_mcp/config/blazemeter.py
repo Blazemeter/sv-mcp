@@ -23,3 +23,7 @@ VS_ASSETS_ENDPOINT: str = "assets"
 VS_CONFIGURATIONS_ENDPOINT: str = "service-mock-configurations"
 VS_VALIDATIONS_ENDPOINT: str = "/system/validations/handlebars"
 VS_CONVERT_ENDPOINT: str = "/system/validations/handlebars/convert"
+
+TDM_API_BASE_URL: str = "https://ar.blazemeter.com/api/v1"
+TDM_PACKAGES_ENDPOINT: str = "packages"
+TDM_ASSETS_ENDPOINT: str = "assets"

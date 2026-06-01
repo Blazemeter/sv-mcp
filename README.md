@@ -15,6 +15,7 @@ to deploying it to the virtual service. All through natural language interaction
 - **Configuration Management**: Create and manage configurations for virtual services.
 - **Virtual Service Management**: Create, modify, deploy, stop a virtual service, track its status.
 - **Virtual Service Templates Management**: Create, modify, create from the virtual service, apply to a virtual service.
+- **Test Data Management**: Create, update, and read TDM datasets for virtual services to drive data-driven transaction matching.
 
 ---
 
@@ -34,7 +35,7 @@ Follow the [BlazeMeter API Keys guide](https://help.blazemeter.com/docs/guide/ap
 
 ## Available Tools
 
-The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through six main tools:
+The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API through the following tools:
 
 | Tool                         | Purpose                             | Key Capabilities                                      |
 |------------------------------|-------------------------------------|-------------------------------------------------------|
@@ -51,6 +52,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | **Configuration**            | Configuration Management            | Create, manage configurations                         |
 | **Sandbox**                  | Sandbox Management                  | Assign http transaction, test it                      |
 | **Tracking**                 | Tracking Management                 | Fetch tracking status for virtual service actions     |
+| **Test Data**                | Test Data Management                | Create, update, read TDM datasets for virtual services |
 ---
 
 ### **User Management**
@@ -225,6 +227,20 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Assign configuration                  | Assigns configuration to the Virtual Service Template                                              |
 | Assign Keystore                       | Assigns keystore asset to the Virtual Service Template                                             |
 | Assign Keystore + Truststore          | Assigns keystore asset to the Virtual Service Template, to be used as both Keystore and Truststore |
+
+---
+
+### **Test Data Management**
+**What it does:** Creates and manages TDM (Test Data Manager) datasets that drive data-driven transaction matching. Dataset fields are referenced in transaction DSLs using `${fieldName}` syntax.
+
+| Action              | What you get                                                                     |
+|---------------------|----------------------------------------------------------------------------------|
+| Create from schema  | Creates a dataset by defining entities with field names and generator expressions |
+| Create from CSV     | Creates a dataset from a local CSV file; entity name is `{stem}_csv`, fields use `valueOfCSV` generators |
+| List                | Lists data-model assets in a workspace                                           |
+| Read                | Reads a data-model asset with full content for a given service                   |
+| Update              | Replaces entities/fields on an existing schema-based dataset                     |
+| Update from CSV     | Rebuilds a CSV-based dataset from a local CSV file; supports field name remapping |
 
 ---
 

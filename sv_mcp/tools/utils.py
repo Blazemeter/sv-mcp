@@ -8,7 +8,7 @@ from typing import Optional, Callable
 
 import httpx
 
-from sv_mcp.config.blazemeter import BZM_API_BASE_URL, VS_API_BASE_URL
+from sv_mcp.config.blazemeter import BZM_API_BASE_URL, VS_API_BASE_URL, TDM_API_BASE_URL
 from sv_mcp.config.token import BzmToken
 from sv_mcp.config.version import __version__
 from sv_mcp.models.result import BaseResult
@@ -44,6 +44,8 @@ async def _api_request(base_url: str,
         try:
             resp = await client.request(method, endpoint, headers=headers, **kwargs)
             resp.raise_for_status()
+            if resp.status_code == 204 or not resp.content:
+                return BaseResult()
             data = resp.json()
 
             result = data.get("result", [])
@@ -89,6 +91,13 @@ async def vs_api_request(token: Optional[BzmToken], method: str, endpoint: str,
                          result_formatter_params: Optional[dict] = None,
                          **kwargs) -> BaseResult:
     return await _api_request(os.getenv('VS_URL', VS_API_BASE_URL), token, method, endpoint,
+                              result_formatter, result_formatter_params, **kwargs)
+
+async def tdm_api_request(token: Optional[BzmToken], method: str, endpoint: str,
+                          result_formatter: Optional[Callable] = None,
+                          result_formatter_params: Optional[dict] = None,
+                          **kwargs) -> BaseResult:
+    return await _api_request(os.getenv('TDM_URL', TDM_API_BASE_URL), token, method, endpoint,
                               result_formatter, result_formatter_params, **kwargs)
 
 def get_date_time_iso(timestamp: Optional[int]) -> Optional[str]:

@@ -31,6 +31,8 @@ pipeline {
                 script {
                     currentBuild.displayName = "#${env.BUILD_NUMBER}"
                 }
+                // k8s agent workspace is owned by a different uid than the step user
+                sh 'git config --global --add safe.directory "*"'
                 sh "pip install uv --break-system-packages"
                 // install kubectl (used by buildkit.build consistent-hash node selection)
                 sh '''
@@ -116,9 +118,6 @@ pipeline {
     }
     
     post {
-        always {
-            cleanWs()
-        }
         success {
             script {
                 echo "Build succeeded"
@@ -137,6 +136,9 @@ pipeline {
                 // Send email notification
                 notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
             }
+        }
+        cleanup {
+            cleanWs()
         }
     }
 }

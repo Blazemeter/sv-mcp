@@ -10,7 +10,7 @@ RUN pip install uv --no-cache-dir
 COPY pyproject.toml uv.lock ./
 COPY sv_mcp/ ./sv_mcp/
 
-RUN uv sync --extra telemetry --no-dev --frozen
+RUN uv sync --no-dev --frozen
 
 # ----------------------------
 # Stage 2: Runtime

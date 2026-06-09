@@ -8,7 +8,7 @@ clearWorkspaceAsRoot()
 pipeline {
     agent {
         kubernetes {
-            yaml agentYaml()
+            yaml agentYaml(additionalContainers: ['k8s.yaml'])
             defaultContainer 'jenkins-docker-agent'
         }
     }
@@ -34,11 +34,6 @@ pipeline {
                 // k8s agent workspace is owned by a different uid than the step user
                 sh 'git config --global --add safe.directory "*"'
                 sh "pip install uv --break-system-packages"
-                // install kubectl (used by buildkit.build consistent-hash node selection)
-                sh '''
-                    curl -LO "https://dl.k8s.io/release/$(curl -L -s https://dl.k8s.io/release/stable.txt)/bin/linux/amd64/kubectl"
-                    install -o root -g root -m 0755 kubectl /usr/local/bin/kubectl
-                '''
             }
         }
         

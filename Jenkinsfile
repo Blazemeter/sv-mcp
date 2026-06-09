@@ -44,7 +44,7 @@ pipeline {
         
         stage('Build') {
             steps {
-                sh "uv sync --extra telemetry --frozen"
+                sh "uv sync --frozen"
                 sh "uv build --sdist"
             }
         }

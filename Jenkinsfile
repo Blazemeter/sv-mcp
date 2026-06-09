@@ -1,4 +1,4 @@
-@Library('jenkins_library')
+@Library('jenkins_library') _
 import com.blazemeter.buildkit.BuildkitManager
 
 BuildkitManager buildkit = new BuildkitManager(this)

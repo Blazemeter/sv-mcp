@@ -1,11 +1,14 @@
-clearWorkspaceAsRoot()
-
 @Library('jenkins_library') _
+import com.blazemeter.buildkit.BuildkitManager
+
+BuildkitManager buildkit = new BuildkitManager(this)
+
+clearWorkspaceAsRoot()
 
 pipeline {
     agent {
         kubernetes {
-            yaml agentYaml()
+            yaml agentYaml(additionalContainers: ['k8s.yaml'])
             defaultContainer 'jenkins-docker-agent'
         }
     }
@@ -28,13 +31,15 @@ pipeline {
                 script {
                     currentBuild.displayName = "#${env.BUILD_NUMBER}"
                 }
+                // k8s agent workspace is owned by a different uid than the step user
+                sh 'git config --global --add safe.directory "*"'
                 sh "pip install uv --break-system-packages"
             }
         }
         
         stage('Build') {
             steps {
-                sh "uv sync --extra telemetry --frozen"
+                sh "uv sync --frozen"
                 sh "uv build --sdist"
             }
         }
@@ -55,11 +60,7 @@ pipeline {
                     
                     def sanitisedBranch = env.BRANCH_NAME.replaceAll("/", "-").replaceAll("[^a-zA-Z0-9\\-_]+", "")
                     env.IMAGE_TAG = "${sanitisedBranch}-${env.BUILD_NUMBER}"
-                    
-                    // Authenticate with GCR/Artifact Registry
-                    dockerLoginGCR('GoogleCredForJenkins2')
-                    sh "gcloud auth configure-docker us-docker.pkg.dev --quiet"
-                    
+
                     // Generate tags
                     def tags = [
                         "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}",
@@ -70,23 +71,19 @@ pipeline {
                     } else if (env.BRANCH_NAME.contains('release')) {
                         tags.add("${env.IMAGE_REPO}/${env.IMAGE_NAME}:latest-release")
                     }
-                    
-                    // Build Docker image using standard Docker
-                    def tagArgs = tags.collect { "-t ${it}" }.join(' ')
-                    sh """
-                        docker build ${tagArgs} \
-                            --build-arg BUILD_NUMBER=${env.BUILD_NUMBER} \
-                            --build-arg BRANCH_NAME=${env.BRANCH_NAME} \
-                            --build-arg BUILD_TIME=${currentBuild.startTimeInMillis} \
-                            --build-arg COMMIT_HASH=${env.GIT_COMMIT} \
-                            -f Dockerfile .
-                    """
-                    
-                    // Push all tags
-                    tags.each { tag ->
-                        sh "docker push ${tag}"
-                    }
-                    
+
+                    // Build & push on buildkit (push auth via podfleet Workload Identity)
+                    buildkit.build(
+                        dockerFile: 'Dockerfile',
+                        buildArgs: [
+                            "BUILD_NUMBER=${env.BUILD_NUMBER}",
+                            "BRANCH_NAME=${env.BRANCH_NAME}",
+                            "BUILD_TIME=${currentBuild.startTimeInMillis}",
+                            "COMMIT_HASH=${env.GIT_COMMIT}"
+                        ],
+                        tags: tags
+                    )
+
                     // Store image details for scans
                     env.DOCKER_IMAGE = "${env.IMAGE_REPO}/${env.IMAGE_NAME}:${env.IMAGE_TAG}"
                 }
@@ -106,51 +103,16 @@ pipeline {
             when { expression { params.PERFORM_PRISMA_SCAN } }
             steps {
                 script {
-                    prismaCloudScanImage(
-                        dockerAddress: 'unix:///var/run/docker.sock',
-                        image: "${env.DOCKER_IMAGE}",
-                        logLevel: 'info',
-                        resultsFile: 'prisma-cloud-scan-results.json',
-                        ignoreImageBuildTime: true
+                    runPrismaCloudScanOnK8s(
+                        imageTag: "${env.DOCKER_IMAGE}",
+                        buildkitManager: buildkit
                     )
-                    
-                    sh '''
-                        if [ -f prisma-cloud-scan-results.json ]; then
-                            chmod 644 prisma-cloud-scan-results.json
-                            ls -lah prisma-cloud-scan-results.json
-                        else
-                            echo "Results file not found"
-                        fi
-                    '''
-                    prismaCloudPublish(resultsFilePattern: 'prisma-cloud-scan-results.json')
                 }
             }
         }
     }
     
     post {
-        always {
-            script {
-                // Clean up Docker images
-                sh """
-                    docker rmi ${env.DOCKER_IMAGE} || true
-                    docker system prune -f || true
-                """
-                if (params.PERFORM_PRISMA_SCAN && fileExists('prisma-cloud-scan-results.json')) {
-                    try {
-                        // Wait a moment to ensure file is fully written
-                        sleep(time: 2, unit: 'SECONDS')
-                        archiveArtifacts artifacts: 'prisma-cloud-scan-results.json', allowEmptyArchive: true
-                        echo "Prisma Cloud scan results archived successfully"
-                    } catch (Exception e) {
-                        echo "Failed to archive Prisma scan results: ${e.message}"
-                    }
-                } else {
-                    echo "Prisma Cloud scan not performed or results file not found"
-                }
-            }
-            cleanWs()
-        }
         success {
             script {
                 echo "Build succeeded"
@@ -169,6 +131,9 @@ pipeline {
                 // Send email notification
                 notifyJobFailureEmailToAuthor(sender: 'jenkins@blazemeter.com')
             }
+        }
+        cleanup {
+            cleanWs()
         }
     }
 }

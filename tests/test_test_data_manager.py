@@ -1,4 +1,4 @@
-from sv_mcp.tools.vs.test_data_manager import build_data_model_content, build_entities_from_csv_headers
+from sv_mcp.tools.vs.test_data_manager import build_data_model_content, build_data_model_content_from_csv
 
 
 def test_build_data_model_content_schema_and_kind():
@@ -64,40 +64,54 @@ def test_build_data_model_content_multiple_entities():
     assert "products" in result["entities"]
 
 
-def test_build_entities_from_csv_headers_generators():
-    entities = build_entities_from_csv_headers(["id", "name", "email"], "users.csv", "model", 500)
-    assert len(entities) == 1
-    entity = entities[0]
-    assert entity["name"] == "model"
-    assert entity["repeat"] == 500
-    assert entity["fields"] == [
-        {"name": "id", "generator": 'randFromCSV("users.csv", "id")'},
-        {"name": "name", "generator": 'randFromCSV("users.csv", "name")'},
-        {"name": "email", "generator": 'randFromCSV("users.csv", "email")'},
+def test_build_data_model_content_from_csv_schema_and_kind():
+    result = build_data_model_content_from_csv("my-service", 123, "users.csv", ["id", "name"])
+    assert result["schema"] == "http://blazemeter.com/blazedata/schema"
+    assert result["kind"] == "sdm"
+    assert result["type"] == "object"
+    assert result["title"] == "MS-my-service-123"
+
+
+def test_build_data_model_content_from_csv_entity_name_from_file_stem():
+    result = build_data_model_content_from_csv("svc", 1, "addresses.csv", ["city"])
+    assert "addresses_csv" in result["entities"]
+    assert result["entities"]["addresses_csv"]["title"] == "addresses"
+
+
+def test_build_data_model_content_from_csv_value_of_csv_generators():
+    result = build_data_model_content_from_csv("svc", 7, "addresses.csv", ["city", "zip"])
+    entity = result["entities"]["addresses_csv"]
+    assert entity["properties"] == {
+        "city": {"type": "string"},
+        "zip": {"type": "string"},
+    }
+    assert entity["requirements"] == {
+        "city": 'valueOfCSV("addresses.csv", "city")',
+        "zip": 'valueOfCSV("addresses.csv", "zip")',
+    }
+
+
+def test_build_data_model_content_from_csv_targets_and_datasources():
+    result = build_data_model_content_from_csv("svc", 1, "prices.csv", ["amount"])
+    entity = result["entities"]["prices_csv"]
+    assert entity["targets"] == {"prices_csv": {"type": "csv", "file": "prices.csv"}}
+    assert entity["datasources"] == [
+        {"id": {"fileName": "prices.csv"}, "type": "csv", "name": "prices.csv", "loop": False}
     ]
 
 
-def test_build_entities_from_csv_headers_default_repeat():
-    entities = build_entities_from_csv_headers(["a", "b"], "data.csv", "model")
-    assert entities[0]["repeat"] == 1000
+def test_build_data_model_content_from_csv_field_mappings_rename_column():
+    result = build_data_model_content_from_csv(
+        "svc", 1, "data.csv", ["c1"],
+        field_mappings=[{"csv_column": "c1", "name": "renamed"}],
+    )
+    entity = result["entities"]["data_csv"]
+    # field is renamed, but the generator still references the original CSV column
+    assert entity["properties"] == {"renamed": {"type": "string"}}
+    assert entity["requirements"] == {"renamed": 'valueOfCSV("data.csv", "c1")'}
 
 
-def test_build_entities_from_csv_headers_custom_entity_name():
-    entities = build_entities_from_csv_headers(["x"], "test.csv", "my_entity", 200)
-    assert entities[0]["name"] == "my_entity"
-    assert entities[0]["repeat"] == 200
-
-
-def test_build_entities_from_csv_headers_single_column():
-    entities = build_entities_from_csv_headers(["amount"], "prices.csv", "model", 100)
-    assert entities[0]["fields"] == [
-        {"name": "amount", "generator": 'randFromCSV("prices.csv", "amount")'}
-    ]
-
-
-def test_build_data_model_content_csv_generators_roundtrip():
-    entities = build_entities_from_csv_headers(["city", "zip"], "addresses.csv", "addr", 50)
-    result = build_data_model_content("svc", 7, entities)
-    reqs = result["entities"]["addr"]["requirements"]
-    assert reqs["city"] == 'randFromCSV("addresses.csv", "city")'
-    assert reqs["zip"] == 'randFromCSV("addresses.csv", "zip")'
+def test_build_data_model_content_from_csv_uuid_unique():
+    r1 = build_data_model_content_from_csv("svc", 1, "data.csv", ["a"])
+    r2 = build_data_model_content_from_csv("svc", 1, "data.csv", ["a"])
+    assert r1["id"] != r2["id"]

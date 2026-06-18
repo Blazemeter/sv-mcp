@@ -163,7 +163,7 @@ class RecordingManager:
             content: str,
             destination: str,
             destination_type: str,
-            name: str,
+            name: Optional[str] = None,
             index: Optional[int] = None,
             delay: Optional[int] = None,
             correlation_id: Optional[str] = None,
@@ -172,12 +172,13 @@ class RecordingManager:
             recorded_at: Optional[str] = None,
     ) -> BaseResult:
         body: Dict[str, Any] = {
-            "name": name,
             "messageType": message_type,
             "content": content,
             "destination": destination,
             "destinationType": destination_type,
         }
+        if name is not None:
+            body["name"] = name
         if index is not None:
             body["index"] = index
         if delay is not None:

@@ -1,6 +1,7 @@
 """
 Simple utilities for BlazeMeter MCP tools.
 """
+import logging
 import os
 import platform
 from datetime import datetime
@@ -12,6 +13,8 @@ from sv_mcp.config.blazemeter import BZM_API_BASE_URL, VS_API_BASE_URL, TDM_API_
 from sv_mcp.config.token import BzmToken
 from sv_mcp.config.version import __version__
 from sv_mcp.models.result import BaseResult
+
+logger = logging.getLogger(__name__)
 
 # Collect system info once
 ua_part = f"{platform.system()} {platform.release()}; {platform.machine()}"
@@ -42,7 +45,12 @@ async def _api_request(base_url: str,
 
     async with httpx.AsyncClient(base_url=base_url, http2=True, timeout=timeout) as client:
         try:
+            if logger.isEnabledFor(logging.DEBUG):
+                req_body = kwargs.get("json") or kwargs.get("data") or kwargs.get("content")
+                logger.debug("→ %s %s%s  body=%s", method, base_url, endpoint, req_body)
             resp = await client.request(method, endpoint, headers=headers, **kwargs)
+            if logger.isEnabledFor(logging.DEBUG):
+                logger.debug("← %s %s  body=%.3000s", resp.status_code, resp.url, resp.text)
             resp.raise_for_status()
             if resp.status_code == 204 or not resp.content:
                 return BaseResult()

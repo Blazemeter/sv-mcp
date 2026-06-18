@@ -47,7 +47,7 @@ BLAZEMETER_API_KEY_FILE_PATH = os.getenv('API_KEY_PATH')
 LOG_LEVELS = Literal["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"]
 
 
-def init_logging(level_name: str) -> None:
+def init_logging(level_name: str, log_file: str | None = None) -> None:
     level = getattr(logging, level_name.upper(), logging.CRITICAL)
     logging.basicConfig(
         level=level,
@@ -55,6 +55,11 @@ def init_logging(level_name: str) -> None:
         stream=sys.stdout,
         force=True,
     )
+    if log_file:
+        fh = logging.FileHandler(log_file)
+        fh.setLevel(level)
+        fh.setFormatter(logging.Formatter("%(asctime)s [%(levelname)s] %(name)s: %(message)s"))
+        logging.getLogger().addHandler(fh)
 
 
 def get_token(api_key_id: str | None = None, api_key_secret: str | None = None):
@@ -165,6 +170,11 @@ def main():
         choices=["DEBUG", "INFO", "WARNING", "ERROR", "CRITICAL"],
         help="Logging level"
     )
+    parser.add_argument(
+        "--log-file",
+        metavar="PATH",
+        help="Write logs to this file (enables logging in STDIO mode without polluting stdout)"
+    )
 
     otel_group = parser.add_argument_group("telemetry", "OpenTelemetry settings (override env vars)")
     otel_group.add_argument(
@@ -185,7 +195,7 @@ def main():
     )
 
     args = parser.parse_args()
-    init_logging(args.log_level)
+    init_logging(args.log_level, args.log_file)
 
     if args.no_telemetry:
         os.environ["OTEL_SDK_DISABLED"] = "true"
@@ -231,8 +241,16 @@ def main():
         sys.exit(0)
 
     if effective_mode == "stdio":
-        logging.disable(logging.CRITICAL)
-        run(log_level="CRITICAL", mode="stdio")
+        if args.log_file:
+            # Keep file handler; remove only the stdout StreamHandler to protect the MCP STDIO transport
+            root = logging.getLogger()
+            for h in root.handlers[:]:
+                if isinstance(h, logging.StreamHandler) and not isinstance(h, logging.FileHandler):
+                    root.removeHandler(h)
+            run(log_level=args.log_level.upper(), mode="stdio")
+        else:
+            logging.disable(logging.CRITICAL)
+            run(log_level="CRITICAL", mode="stdio")
     elif effective_mode == "http":
         run(log_level=args.log_level.upper(), mode="http")
     elif effective_mode == "http-stateless":

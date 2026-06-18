@@ -78,9 +78,12 @@ class RecordingManager:
             body["messages"] = messages
         if runtime_config is not None:
             body["runtimeConfig"] = runtime_config
+        params: Dict[str, Any] = {}
+        if service_id is not None:
+            params["serviceId"] = service_id
         return await vs_api_request(
             self.token, "POST", self._recordings_url(workspace_id),
-            result_formatter=format_recordings, json=body
+            result_formatter=format_recordings, json=body, params=params
         )
 
     async def update_recording(
@@ -160,7 +163,7 @@ class RecordingManager:
             content: str,
             destination: str,
             destination_type: str,
-            name: Optional[str] = None,
+            name: str,
             index: Optional[int] = None,
             delay: Optional[int] = None,
             correlation_id: Optional[str] = None,
@@ -169,13 +172,12 @@ class RecordingManager:
             recorded_at: Optional[str] = None,
     ) -> BaseResult:
         body: Dict[str, Any] = {
+            "name": name,
             "messageType": message_type,
             "content": content,
             "destination": destination,
             "destinationType": destination_type,
         }
-        if name is not None:
-            body["name"] = name
         if index is not None:
             body["index"] = index
         if delay is not None:

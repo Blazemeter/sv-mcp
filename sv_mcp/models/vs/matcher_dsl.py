@@ -6,8 +6,8 @@ from sv_mcp.models.vs.xpath_matcher_namespace import XmlMatcherNamespace
 
 
 class MatcherDsl(BaseModel):
-    key: str = Field(
-        '',
+    key: Optional[str] = Field(
+        None,
         description=(
             "Matcher key. For URL matchers has static value 'url', "
             "for header matchers - header name, "

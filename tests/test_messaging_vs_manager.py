@@ -83,6 +83,27 @@ async def test_update_generic(manager):
     assert "recorderConfig" not in body
 
 
+async def test_assign_transactions_with_flow_configuration(manager):
+    with patch("sv_mcp.tools.vs.messaging_virtual_service_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.assign_transactions(
+            workspace_id=1, vs_id=10, transaction_ids=[101, 102],
+            flow_configuration="order-flow",
+        )
+    body = mock_req.call_args.kwargs["json"]
+    assert body["includeIds"] == [101, 102]
+    assert body["flowConfiguration"] == "order-flow"
+
+
+async def test_assign_transactions_without_flow_configuration(manager):
+    with patch("sv_mcp.tools.vs.messaging_virtual_service_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.assign_transactions(workspace_id=1, vs_id=10, transaction_ids=[101])
+    body = mock_req.call_args.kwargs["json"]
+    assert body["includeIds"] == [101]
+    assert "flowConfiguration" not in body
+
+
 async def test_update_mq9_alias_delegates(manager):
     manager.update = AsyncMock(return_value=BaseResult(result=[]))
     await manager.update_mq9(

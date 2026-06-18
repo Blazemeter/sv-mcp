@@ -72,7 +72,7 @@ class VirtualService(BaseModel):
         )
     )
     priorityMode: Optional[str] = Field(
-        None, description="Transaction selection mode: PRIORITY, RANDOM, or ROUND_ROBIN."
+        None, description="Transaction selection mode: DEFAULT or UNIQUE_PRIORITY."
     )
     responseDelay: Optional[ResponseDelay] = Field(
         None, description="Global response delay applied to all transactions in this virtual service."

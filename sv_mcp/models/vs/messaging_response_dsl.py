@@ -16,7 +16,7 @@ class MessagingResponseDsl(BaseModel):
         )
     )
     content: Optional[str] = Field(
-        "", description="Base64-encoded payload of the outgoing message"
+        "", description="Response body payload. Provide as plain text (e.g. '{\"status\":\"ok\"}') or as a valid base64 string. Plain text and invalid base64 are auto-encoded by the tool."
     )
     charset: Optional[str] = Field(
         "UTF-8", description="Character set for the response content (default UTF-8)"

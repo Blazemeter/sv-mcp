@@ -57,6 +57,8 @@ class MessagingTransactionManager:
                      messaging_transaction_mappings: Optional[dict] = None,
                      sample_body: Optional[str] = None) -> BaseResult:
         dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
+        dsl_dict.setdefault("type", "MESSAGING")
+        MessagingTransactionManager._normalize_dsl_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         if request:
             for body_matcher in request.get("body", []):
@@ -107,6 +109,8 @@ class MessagingTransactionManager:
                      messaging_transaction_mappings: Optional[dict] = None,
                      sample_body: Optional[str] = None) -> BaseResult:
         dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
+        dsl_dict.setdefault("type", "MESSAGING")
+        MessagingTransactionManager._normalize_dsl_content(dsl_dict)
 
         body: Dict[str, Any] = {
             "id": id,
@@ -178,6 +182,20 @@ class MessagingTransactionManager:
         encoded_bytes = base64.b64encode(input_str.encode('utf-8'))
         encoded_str = encoded_bytes.decode('utf-8')
         return encoded_str
+
+    @staticmethod
+    def _normalize_dsl_content(dsl_dict: dict) -> None:
+        """Ensure responseDsl.content is valid base64. Auto-encodes plain text in place."""
+        response_dsl = dsl_dict.get("responseDsl")
+        if not isinstance(response_dsl, dict):
+            return
+        content = response_dsl.get("content")
+        if not content:
+            return
+        try:
+            base64.b64decode(content + '=' * (-len(content) % 4), validate=True)
+        except Exception:
+            response_dsl["content"] = base64.b64encode(content.encode('utf-8')).decode('utf-8')
 
 
 def register(mcp, token: Optional[BzmToken]) -> None:
@@ -413,7 +431,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "create":
                     return await transaction_manager.create(
                         args["name"], args["workspace_id"], args["serviceId"],
-                        args["type"], args["dsl"], args.get("delay", None),
+                        args.get("type", "MESSAGING"), args["dsl"], args.get("delay", None),
                         description=args.get("description"),
                         tags=args.get("tags"),
                         priority=args.get("priority"),
@@ -423,7 +441,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "update":
                     return await transaction_manager.update(
                         args["id"], args["name"], args["workspace_id"],
-                        args["type"], args["dsl"], args.get("delay", None),
+                        args.get("type", "MESSAGING"), args["dsl"], args.get("delay", None),
                         description=args.get("description"),
                         tags=args.get("tags"),
                         priority=args.get("priority"),

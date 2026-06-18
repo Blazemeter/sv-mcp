@@ -19,6 +19,26 @@ class ActionManager:
         self.token = token
         self.ctx = ctx
 
+    async def read(self, workspace_id: int, transaction_id: int, action_id: int) -> BaseResult:
+        return await vs_api_request(
+            self.token,
+            "GET",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{transaction_id}/{VS_ACTIONS_ENDPOINT}/{action_id}",
+            result_formatter=format_actions
+        )
+
+    async def list(self, workspace_id: int, transaction_id: int, sort: Optional[str] = None) -> BaseResult:
+        parameters = {}
+        if sort is not None:
+            parameters["sort"] = sort
+        return await vs_api_request(
+            self.token,
+            "GET",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{transaction_id}/{VS_ACTIONS_ENDPOINT}",
+            result_formatter=format_actions,
+            params=parameters
+        )
+
     async def create_http_call(self, action_name: str, workspace_id: int, transaction_id: int,
                                action: WebAction) -> BaseResult:
         action_dict = action.model_dump() if isinstance(action, WebAction) else action
@@ -72,8 +92,18 @@ def register(mcp, token: Optional[BzmToken]) -> None:
         name=f"{VS_TOOLS_PREFIX}_action",
         description="""
         Operations on actions. 
-        Use this when a user needs to create an action for transaction.
+        Use this when a user needs to create, read or list actions for a transaction.
         Actions:
+        - read: Reads a single action of a transaction with full details.
+            args(dict):
+                workspace_id (int): Mandatory. The id of the workspace.
+                transaction_id (int): Mandatory. The id of the transaction.
+                action_id (int): Mandatory. The id of the action to read.
+        - list: Lists all actions of a transaction (minimal info).
+            args(dict):
+                workspace_id (int): Mandatory. The id of the workspace.
+                transaction_id (int): Mandatory. The id of the transaction.
+                sort (str): Optional. Field to sort the actions by.
         - create_http_call: Creates an http call action for transaction. This action is executed synchronously.
             args(dict): Dictionary with the following required parameters:
                 action_name (str): Mandatory. The name of the action.
@@ -107,6 +137,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
 
         async def _dispatch():
             match action:
+                case "read":
+                    return await action_manager.read(
+                        args["workspace_id"], args["transaction_id"], args["action_id"],
+                    )
+                case "list":
+                    return await action_manager.list(
+                        args["workspace_id"], args["transaction_id"], args.get("sort"),
+                    )
                 case "create_http_call":
                     return await action_manager.create_http_call(
                         args["action_name"], args["workspace_id"],

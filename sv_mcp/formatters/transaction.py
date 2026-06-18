@@ -36,7 +36,7 @@ def format_messaging_transactions(transactions: List[Any], params: Optional[dict
                 serviceId=transaction.get("serviceId"),
                 description=transaction.get("description"),
                 tags=transaction.get("tags") or [],
-                priority=transaction.get("priority", 10),
+                priority=transaction.get("priority"),
                 dsl=MessagingDsl(**transaction.get("dsl")),
                 messagingTransactionMappings=txn_mapping,
                 sampleBody=transaction.get("sampleBody"),

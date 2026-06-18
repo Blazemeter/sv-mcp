@@ -49,7 +49,7 @@ class MessagingVirtualServiceManager(BaseVirtualServiceManager):
         body = {
             "name": name,
             "serviceId": service_id,
-            "type": "MESSAGING",
+            "type": "TRANSACTIONAL",
             "harborId": harborId,
             "shipId": shipId,
             "replicas": 1,
@@ -74,7 +74,6 @@ class MessagingVirtualServiceManager(BaseVirtualServiceManager):
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}",
             result_formatter=format_virtual_services,
             json=body,
-            params={"serviceId": service_id},
         )
 
     async def update(
@@ -198,6 +197,24 @@ class MessagingVirtualServiceManager(BaseVirtualServiceManager):
             mock_service_transactions=mock_service_transactions,
         )
 
+    async def assign_transactions(
+            self,
+            workspace_id: int,
+            vs_id: int,
+            transaction_ids: List[int],
+            flow_configuration: Optional[str] = None,
+    ) -> BaseResult:
+        vs_body: Dict[str, Any] = {"includeIds": transaction_ids}
+        if flow_configuration is not None:
+            vs_body["flowConfiguration"] = flow_configuration
+        return await vs_api_request(
+            self.token,
+            "PATCH",
+            f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}",
+            result_formatter=format_virtual_services,
+            json=vs_body,
+        )
+
     async def assign_recordings(self, workspace_id: int, vs_id: int, recording_ids: List[int]) -> BaseResult:
         vs_body = {"includeRecordingIds": recording_ids}
         return await vs_api_request(
@@ -275,7 +292,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 mockServiceTransactions (list): Optional. Transaction references [{txnId, priority, ...}].
                 mockServiceRecordings (list): Optional. Recording references [{recordingId, runtimeConfig}].
                 recorderConfig (dict): Optional. Live recording config {maxMessagesCount, maxMessagesPerSecondCount, mappings}.
-                priorityMode (str): Optional. PRIORITY, RANDOM, or ROUND_ROBIN.
+                priorityMode (str): Optional. DEFAULT or UNIQUE_PRIORITY.
                 responseDelay (dict): Optional. {type, fixedDelay} or {type, median, sigma} etc.
                 messagingRunnerEnabled (bool): Optional. Default true.
         - update: Update an existing messaging virtual service (partial — only provided fields change).
@@ -324,11 +341,17 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args:
                 workspace_id (int): Mandatory.
                 id (int): Mandatory.
-        - assign_transactions: Assign transactions to a virtual service.
+        - assign_transactions: Assign transactions to a messaging virtual service.
+            When the broker config uses flow configurations, pass flow_configuration so the
+            server can copy the named flow's routing (sourceName, sourceType, destinations)
+            onto every newly added transaction.
             args:
                 workspace_id (int): Mandatory.
                 id (int): Mandatory.
                 transaction_ids (list[int]): Mandatory.
+                flow_configuration (str): Optional. Name of a flow in brokerConfig.flowConfigurations[].name.
+                    Required when the VS uses flow-based routing — omitting it leaves transactions with
+                    an empty MessagingTransactionMapping (no routing).
         - unassign_transactions: Unassign transactions from a virtual service.
             args:
                 workspace_id (int): Mandatory.
@@ -468,7 +491,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     )
                 case "assign_transactions":
                     return await vs_manager.assign_transactions(
-                        args["workspace_id"], args["id"], args["transaction_ids"]
+                        args["workspace_id"], args["id"], args["transaction_ids"],
+                        flow_configuration=args.get("flow_configuration"),
                     )
                 case "unassign_transactions":
                     return await vs_manager.unassign_transactions(

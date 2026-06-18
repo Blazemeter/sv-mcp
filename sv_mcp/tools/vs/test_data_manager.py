@@ -521,7 +521,8 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 global_variables (dict, optional): flat str→str map of global variables.
 
         TdmAsset Schema:
-        """ + str(TdmAsset.model_json_schema())
+        """ + str(TdmAsset.model_json_schema()),
+        structured_output=False,
     )
     async def test_data(action: str, args: Dict[str, Any], ctx: Context) -> BaseResult:
         manager = TestDataManager(token, ctx)

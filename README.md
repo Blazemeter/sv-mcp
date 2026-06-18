@@ -8,7 +8,7 @@ to deploying it to the virtual service. All through natural language interaction
 
 - **Service Management**: Create and manage services.
 - **Transaction Management**: Create, validate, manage HTTP and Messaging transactions.
-- **Action Management**: Create, validate, manage transaction actions (Http calls and Webhooks).
+- **Action Management**: Create, read, list, and manage transaction actions (Http calls and Webhooks).
 - **Asset Management**: Upload assets (certificates and keystores).
 - **Sandbox Management**: Attach HTTP transaction and test it.
 - **Location Management**: List available locations.
@@ -47,7 +47,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | **Service**                  | Service Management                  | Create and manage services                            |
 | **Http Transaction**         | Http Transaction Management         | Create, manage and validate http transactions         |
 | **Messaging Transaction**    | Messaging Transaction Management    | Create, manage and validate messaging transactions    |
-| **Action**                   | Action Management                   | Create, manage and transactions actions               |
+| **Action**                   | Action Management                   | Create, read, list and manage transaction actions     |
 | **Virtual service**          | Virtual Service Management          | Create, manage, deploy, stop virtual services         |
 | **Virtual service template** | Virtual Service Template Management | Create, manage, apply to the virtual service          |
 | **Messaging Virtual Service**| Messaging Virtual Service Management| Create, manage, deploy messaging virtual services for IBM MQ, ActiveMQ, Kafka |
@@ -133,10 +133,12 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 ---
 
 ### **Action Management**
-**What it does:** Creates actions for transaction.
+**What it does:** Creates, reads, and lists actions for a transaction.
 
 | Action                      | What you get                                   |
 |-----------------------------|------------------------------------------------|
+| Read an Action              | Reads a single transaction action's details    |
+| List Actions                | Lists all actions of a transaction             |
 | Create an HTTP Call         | Creates an HTTP Call sync action               |
 | Create a Web Hook           | Creates a Webhook async                        |
 | Assign keystore             | Assign keystore asset to an existing action    |

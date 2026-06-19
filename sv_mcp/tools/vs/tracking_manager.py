@@ -1,4 +1,3 @@
-import traceback
 from typing import Optional, Dict, Any
 
 import httpx
@@ -10,7 +9,7 @@ from sv_mcp.formatters.tracking import format_trackings, format_asset_trackings
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.trackings import MasterTracking
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import vs_api_request
+from sv_mcp.tools.utils import vs_api_request, error_result
 
 
 class TrackingManager:
@@ -67,10 +66,5 @@ def register(mcp, token: Optional[BzmToken]) -> None:
 
         try:
             return await run_tool("virtual_services_tracking", action, ctx, _dispatch)
-        except httpx.HTTPStatusError:
-            return BaseResult(error=f"Error: {traceback.format_exc()}")
-        except Exception:
-            return BaseResult(
-                error=f"""Error: {traceback.format_exc()}
-                          If you think this is a bug, please contact BlazeMeter support or report issue at https://github.com/BlazeMeter/bzm-mcp/issues"""
-            )
+        except Exception as exc:
+            return error_result(exc)

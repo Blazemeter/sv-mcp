@@ -18,6 +18,12 @@ except ImportError:
 _call_counter = None
 _duration_histogram = None
 
+# UPA telemetry mandate: shipped releases export to the Perforce OTLP collector
+# over gRPC. Used only when OTEL_EXPORTER_OTLP_ENDPOINT is not set. The transport
+# is always gRPC (never OTLP/HTTP); OTEL_EXPORTER_OTLP_ENDPOINT overrides only the
+# destination URL — an http:// scheme there just means an insecure (no-TLS) channel.
+DEFAULT_OTLP_ENDPOINT = "https://grpc.public.prd.shared.perforce.com"
+
 
 def init_telemetry(service_name: str, service_version: str) -> None:
     global _call_counter, _duration_histogram
@@ -34,13 +40,17 @@ def init_telemetry(service_name: str, service_version: str) -> None:
         resource = Resource.create({SERVICE_NAME: service_name, SERVICE_VERSION: service_version})
         provider = TracerProvider(resource=resource)
 
-        endpoint = os.getenv("OTEL_EXPORTER_OTLP_ENDPOINT")
-        if endpoint:
-            try:
-                from opentelemetry.exporter.otlp.proto.http.trace_exporter import OTLPSpanExporter
-                provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
-            except Exception:
-                logger.debug("OTLP trace exporter setup failed", exc_info=True)
+        # Default the export destination to the Perforce gRPC collector. Users
+        # override only the endpoint via OTEL_EXPORTER_OTLP_ENDPOINT;
+        # OTEL_SDK_DISABLED=true (or --no-telemetry) turns tracing off entirely.
+        if not os.environ.get("OTEL_EXPORTER_OTLP_ENDPOINT"):
+            os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] = DEFAULT_OTLP_ENDPOINT
+
+        try:
+            from opentelemetry.exporter.otlp.proto.grpc.trace_exporter import OTLPSpanExporter
+            provider.add_span_processor(BatchSpanProcessor(OTLPSpanExporter()))
+        except Exception:
+            logger.debug("OTLP trace exporter setup failed", exc_info=True)
 
         trace.set_tracer_provider(provider)
         logger.debug("OTel TracerProvider initialised (service=%s, version=%s)", service_name, service_version)
@@ -50,12 +60,11 @@ def init_telemetry(service_name: str, service_version: str) -> None:
             from opentelemetry.sdk.metrics.export import PeriodicExportingMetricReader
 
             readers = []
-            if endpoint:
-                try:
-                    from opentelemetry.exporter.otlp.proto.http.metric_exporter import OTLPMetricExporter
-                    readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
-                except Exception:
-                    logger.debug("OTLP metric exporter setup failed", exc_info=True)
+            try:
+                from opentelemetry.exporter.otlp.proto.grpc.metric_exporter import OTLPMetricExporter
+                readers.append(PeriodicExportingMetricReader(OTLPMetricExporter()))
+            except Exception:
+                logger.debug("OTLP metric exporter setup failed", exc_info=True)
 
             meter_provider = MeterProvider(resource=resource, metric_readers=readers)
             metrics.set_meter_provider(meter_provider)

@@ -108,5 +108,44 @@ async def tdm_api_request(token: Optional[BzmToken], method: str, endpoint: str,
     return await _api_request(os.getenv('TDM_URL', TDM_API_BASE_URL), token, method, endpoint,
                               result_formatter, result_formatter_params, **kwargs)
 
+def error_result(exc: Exception) -> BaseResult:
+    """
+    Convert an exception into a clean, classified BaseResult error.
+
+    Distinguishes request problems (4xx), environmental problems (timeout /
+    network), and system failures (5xx / unexpected) so an agent can pick a
+    valid recovery path. Never returns raw tracebacks or internal server state
+    to the caller — full diagnostics are logged server-side instead.
+    """
+    if isinstance(exc, httpx.HTTPStatusError):
+        code = exc.response.status_code
+        try:
+            data = exc.response.json()
+            server_msg = data.get("error") or data.get("message") or ""
+        except Exception:
+            server_msg = ""
+        if code == 401:
+            return BaseResult(error=f"Invalid credentials: {server_msg}".strip())
+        if code == 403:
+            return BaseResult(error=f"Access forbidden (check workspace permissions): {server_msg}".strip())
+        if code == 404:
+            return BaseResult(error=f"Not found: {server_msg}".strip())
+        if code == 429:
+            return BaseResult(error=f"Rate limited by BlazeMeter; wait a moment before retrying. {server_msg}".strip())
+        if code >= 500:
+            return BaseResult(error=f"BlazeMeter service error (HTTP {code}); this is a server-side problem, retry later.")
+        return BaseResult(error=(server_msg or f"Request failed (HTTP {code})."))
+    if isinstance(exc, httpx.TimeoutException):
+        return BaseResult(error="Request to BlazeMeter timed out; the service may be slow or unreachable. Retry shortly.")
+    if isinstance(exc, httpx.HTTPError):
+        return BaseResult(error="Network error contacting BlazeMeter; check connectivity and retry.")
+    logger.exception("Unexpected error in tool dispatch")
+    return BaseResult(
+        error=f"Internal error: {type(exc).__name__}. "
+              "If you think this is a bug, please contact BlazeMeter support or "
+              "report the issue at https://github.com/BlazeMeter/bzm-mcp/issues"
+    )
+
+
 def get_date_time_iso(timestamp: Optional[int]) -> Optional[str]:
     return datetime.fromtimestamp(timestamp).isoformat() if timestamp is not None else None

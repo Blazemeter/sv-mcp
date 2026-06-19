@@ -18,9 +18,9 @@ RUN uv sync --no-dev --frozen
 FROM python:3.13-slim AS runtime
 
 ENV MCP_DOCKER=true
-ENV OTEL_EXPORTER_OTLP_ENDPOINT=""
-ENV OTEL_SDK_DISABLED=""
 ENV PYTHONDONTWRITEBYTECODE=1
+# Telemetry defaults to the Perforce gRPC collector. Override the destination
+# with OTEL_EXPORTER_OTLP_ENDPOINT, or set OTEL_SDK_DISABLED=true to turn it off.
 
 WORKDIR /app
 

@@ -1,6 +1,5 @@
 import csv
 import json
-import traceback
 import uuid
 from pathlib import Path
 from typing import Optional, Dict, Any
@@ -17,7 +16,7 @@ from sv_mcp.formatters.test_data import format_tdm_packages, format_tdm_assets
 from sv_mcp.models.vs.test_data import TdmAsset
 from sv_mcp.models.result import BaseResult
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import tdm_api_request
+from sv_mcp.tools.utils import tdm_api_request, error_result
 
 
 def build_data_model_content(service_name: str, service_id: int, entities: list) -> dict:
@@ -580,10 +579,5 @@ def register(mcp, token: Optional[BzmToken]) -> None:
 
         try:
             return await run_tool("virtual_services_test_data", action, ctx, _dispatch)
-        except httpx.HTTPStatusError:
-            return BaseResult(error=f"Error: {traceback.format_exc()}")
-        except Exception:
-            return BaseResult(
-                error=f"""Error: {traceback.format_exc()}
-                          If you think this is a bug, please contact BlazeMeter support or report issue at https://github.com/BlazeMeter/bzm-mcp/issues"""
-            )
+        except Exception as exc:
+            return error_result(exc)

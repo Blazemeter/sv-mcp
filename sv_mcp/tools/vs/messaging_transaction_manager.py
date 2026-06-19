@@ -1,5 +1,4 @@
 import base64
-import traceback
 from typing import Optional, Dict, Any, Annotated, List
 
 import httpx
@@ -13,7 +12,7 @@ from sv_mcp.formatters.validations import format_validation_request
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.messaging_transaction import MessagingTransaction
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import vs_api_request
+from sv_mcp.tools.utils import vs_api_request, error_result
 
 
 class MessagingTransactionManager:
@@ -467,10 +466,5 @@ def register(mcp, token: Optional[BzmToken]) -> None:
 
         try:
             return await run_tool("virtual_services_messaging_transaction", action, ctx, _dispatch)
-        except httpx.HTTPStatusError:
-            return BaseResult(error=f"Error: {traceback.format_exc()}")
-        except Exception:
-            return BaseResult(
-                error=f"""Error: {traceback.format_exc()}
-                          If you think this is a bug, please contact BlazeMeter support or report issue at https://github.com/BlazeMeter/bzm-mcp/issues"""
-            )
+        except Exception as exc:
+            return error_result(exc)

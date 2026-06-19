@@ -316,22 +316,24 @@ MCP_ENABLED_TOOLS="blazemeter_user,blazemeter_account,virtual_services_virtual_s
 
 ### Observability (OpenTelemetry)
 
-The server emits one trace span per MCP tool call using [OpenTelemetry](https://opentelemetry.io/). Tracing is off by default and activates automatically when you set an OTLP endpoint.
+The server emits one trace span per MCP tool call using [OpenTelemetry](https://opentelemetry.io/). By default it exports over **gRPC** to the Perforce collector at `https://grpc.public.prd.shared.perforce.com`. No configuration is needed for shipped releases; set `OTEL_SDK_DISABLED=true` (or `--no-telemetry`) to turn it off.
 
-**Enable tracing — environment variable:**
+**Override the destination — environment variable:**
 
 ```bash
-export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4318
+export OTEL_EXPORTER_OTLP_ENDPOINT=http://localhost:4317   # gRPC (insecure for localhost)
 sv-mcp --mcp
 ```
 
-**Enable tracing — CLI argument (binary / uvx):**
+**Override the destination — CLI argument (binary / uvx):**
 
 ```bash
-sv-mcp --mcp --otel-endpoint http://localhost:4318
+sv-mcp --mcp --otel-endpoint http://localhost:4317
 ```
 
-The `--otel-endpoint` flag overrides `OTEL_EXPORTER_OTLP_ENDPOINT` when both are set.
+The transport is always **gRPC** (OTLP/HTTP is not used). `OTEL_EXPORTER_OTLP_ENDPOINT` / `--otel-endpoint` overrides only the *destination URL*, not the protocol — and an `http://` scheme there simply means an insecure (no-TLS) gRPC channel, so always target the collector's gRPC port (`4317`), never its HTTP port (`4318`).
+
+> A local verification stack (collector + Jaeger + Prometheus + Grafana) lives in [`integration/telemetry/`](integration/telemetry/) — `docker compose up`, then point the server at `http://localhost:4317`.
 
 **Passing authentication headers:**
 
@@ -366,20 +368,22 @@ Each span includes:
 
 **SDK availability by deployment:**
 
-| Deployment | OTel SDK bundled | What you need |
-|---|---|---|
-| Docker image | ✅ Yes | Pass `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` at runtime |
-| Standalone binary | ✅ Yes | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
-| uvx | ✅ Yes | `--otel-endpoint URL` arg or `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
-| pip install | ✅ Yes | Set `OTEL_EXPORTER_OTLP_ENDPOINT` env var |
+The SDK is bundled in every deployment and exports to the Perforce gRPC collector by default — nothing extra is required to get tracing. Override only if you want a different destination:
 
-**Docker:**
+| Deployment | OTel SDK bundled | To redirect / disable |
+|---|---|---|
+| Docker image | ✅ Yes | `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` or `-e OTEL_SDK_DISABLED=true` |
+| Standalone binary | ✅ Yes | `--otel-endpoint URL` / `--no-telemetry` |
+| uvx | ✅ Yes | `--otel-endpoint URL` / `--no-telemetry` |
+| pip install | ✅ Yes | `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_SDK_DISABLED` env var |
+
+**Docker (redirect to your own collector):**
 
 ```bash
 docker run --rm -i \
   -e API_KEY_ID=your_key_id \
   -e API_KEY_SECRET=your_key_secret \
-  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4318 \
+  -e OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4317 \
   sv-mcp
 ```
 
@@ -393,7 +397,7 @@ pip install sv-mcp
 
 ```bash
 uvx --from "git+https://github.com/Blazemeter/sv-mcp.git" sv-mcp \
-  --otel-endpoint http://your-collector:4318
+  --otel-endpoint http://your-collector:4317
 ```
 
 The server never crashes if the endpoint is unreachable or the SDK is not installed.

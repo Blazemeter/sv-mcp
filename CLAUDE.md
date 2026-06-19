@@ -114,9 +114,9 @@ config/
 
 **Data flow:** MCP tool call → manager → `tools/utils.py` (httpx) → BlazeMeter API → formatter → Pydantic model → `BaseResult` response.
 
-**OTel instrumentation pattern:** every tool manager wraps its `match action:` block in an `async def _dispatch()` closure and calls `run_tool(tool_name, action, ctx, _dispatch)`. `run_tool` opens a span, awaits the closure, records errors, and re-raises — so existing `except` handlers are unchanged. When `opentelemetry-api` is absent or `OTEL_EXPORTER_OTLP_ENDPOINT` is not set, `run_tool` is a zero-overhead passthrough.
+**OTel instrumentation pattern:** every tool manager wraps its `match action:` block in an `async def _dispatch()` closure and calls `run_tool(tool_name, action, ctx, _dispatch)`. `run_tool` opens a span, awaits the closure, records errors, and re-raises. The manager then catches any exception with `except Exception as exc: return error_result(exc)` (`tools/utils.py`), which classifies the failure (4xx request / timeout / 5xx system / unexpected) into a clean `BaseResult.error` and logs full diagnostics server-side — never forwarding raw tracebacks to the caller. When `opentelemetry-api` is absent, `run_tool` is a zero-overhead passthrough.
 
-**SDK bundling:** `opentelemetry-sdk` + `opentelemetry-exporter-otlp` are bundled in all install methods (pip, uvx, Docker, binary). Tracing is activated by setting `OTEL_EXPORTER_OTLP_ENDPOINT` at runtime — no extra install step needed.
+**SDK bundling & default export:** `opentelemetry-sdk` + `opentelemetry-exporter-otlp` are bundled in all install methods (pip, uvx, Docker, binary). Tracing is **on by default** for shipped releases, exporting over **gRPC only** to `https://grpc.public.prd.shared.perforce.com` (`DEFAULT_OTLP_ENDPOINT` in `telemetry.py`) — per the UPA mandate (gRPC, not http/json or http/protobuf). `OTEL_EXPORTER_OTLP_ENDPOINT` overrides only the destination URL (an `http://` scheme = insecure gRPC channel, so use the collector's `:4317` port); disable with `OTEL_SDK_DISABLED=true` (`--no-telemetry`).
 
 ## Key Domain Concepts
 

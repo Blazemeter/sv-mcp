@@ -1,9 +1,10 @@
+import os
 import pytest
 import httpx
 from unittest.mock import AsyncMock, MagicMock, patch
 
 from sv_mcp.models.result import BaseResult
-from sv_mcp.telemetry import run_tool, init_telemetry
+from sv_mcp.telemetry import run_tool, init_telemetry, DEFAULT_OTLP_ENDPOINT
 
 
 def _make_ctx(meta=None):
@@ -174,3 +175,16 @@ class TestInitTelemetry:
     def test_does_not_raise_with_endpoint_set(self, monkeypatch):
         monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4318")
         init_telemetry("sv-mcp", "1.0.0")
+
+    def test_defaults_endpoint_to_perforce_grpc(self, monkeypatch):
+        monkeypatch.delenv("OTEL_EXPORTER_OTLP_ENDPOINT", raising=False)
+        monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+        init_telemetry("sv-mcp", "1.0.0")
+        assert os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] == DEFAULT_OTLP_ENDPOINT
+        assert DEFAULT_OTLP_ENDPOINT == "https://grpc.public.prd.shared.perforce.com"
+
+    def test_explicit_endpoint_not_overridden(self, monkeypatch):
+        monkeypatch.setenv("OTEL_EXPORTER_OTLP_ENDPOINT", "http://localhost:4317")
+        monkeypatch.delenv("OTEL_SDK_DISABLED", raising=False)
+        init_telemetry("sv-mcp", "1.0.0")
+        assert os.environ["OTEL_EXPORTER_OTLP_ENDPOINT"] == "http://localhost:4317"

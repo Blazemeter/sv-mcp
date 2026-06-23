@@ -15,10 +15,6 @@ from sv_mcp.tools.utils import bzm_api_request, error_result
 
 class WorkspaceManager:
 
-    # Note: It's allowed to list all the user workspaces without AI consent
-    # the format_workspaces only expose minimum information to user
-    # The read operation verify permissions and don't allow to share details.
-
     def __init__(self, token: Optional[BzmToken], ctx: Context):
         self.token = token
         self.ctx = ctx

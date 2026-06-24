@@ -42,7 +42,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 | Tool                         | Purpose                             | Key Capabilities                                      |
 |------------------------------|-------------------------------------|-------------------------------------------------------|
 | **User**                     | Blazemeter User Information         | Get current user details, default account/workspace/project |
-| **Account**                  | Blazemeter Account Management       | List accounts, read account details |
+| **Account**                  | Blazemeter Account Management       | List accounts, check AI consent, read account details |
 | **Workspace**                | Blazemeter Workspace Management     | Manage workspaces, check billing usage       |
 | **Service**                  | Service Management                  | Create and manage services                            |
 | **Http Transaction**         | Http Transaction Management         | Create, manage and validate http transactions         |
@@ -69,7 +69,7 @@ The BlazeMeter MCP Server provides comprehensive access to BlazeMeter's API thro
 ---
 
 ### **Account Management**
-**What it does:** Manage your BlazeMeter accounts.
+**What it does:** Manage your BlazeMeter accounts and check permissions.
 
 | Action | What you get |
 |--------|-------------|

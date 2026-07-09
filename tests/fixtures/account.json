@@ -1,0 +1,10 @@
+[
+  {
+    "id": 12345,
+    "name": "My Account",
+    "description": "Test account",
+    "aiConsent": true,
+    "created": 1709824666,
+    "updated": 1709824666
+  }
+]

@@ -1,0 +1,79 @@
+{
+  "http": [
+    {
+      "id": 6485927,
+      "name": "get test",
+      "serviceId": 341611,
+      "type": "HTTP",
+      "dsl": {
+        "type": "HTTP",
+        "priority": 1,
+        "requestDsl": {
+          "method": "GET",
+          "host": "http://localhost",
+          "path": "/test",
+          "url": {
+            "key": "url",
+            "matcherName": "equals_url",
+            "matchingValue": "/test",
+            "optional": false
+          },
+          "headers": [],
+          "queryParams": [
+            {
+              "key": "a",
+              "matcherName": "equals",
+              "matchingValue": "1",
+              "optional": false
+            }
+          ],
+          "cookies": [],
+          "credentials": {"username": null, "password": null},
+          "body": []
+        },
+        "responseDsl": {
+          "binary": false,
+          "status": 200,
+          "statusMessage": "OK",
+          "proxyUrl": "",
+          "headers": [],
+          "contentType": "text",
+          "content": "",
+          "charset": "UTF-8",
+          "responseDelay": {
+            "type": "none", "lower": 0, "upper": 0, "median": 0.0,
+            "sigma": 0.0, "duration": 0, "chunks": 0, "dribbled": false
+          },
+          "failoverEnabled": false,
+          "statusCodeConditions": []
+        },
+        "redirectUrl": null
+      },
+      "assets": []
+    }
+  ],
+  "messaging": [
+    {
+      "id": 7001,
+      "name": "process order",
+      "serviceId": 341611,
+      "type": "MESSAGING",
+      "dsl": {
+        "type": "MESSAGING",
+        "requestDsl": {
+          "headers": [],
+          "properties": [
+            {"key": "orderType", "matcherName": "equals", "matchingValue": "NEW", "optional": false}
+          ],
+          "body": []
+        },
+        "responseDsl": {
+          "headers": [],
+          "properties": [],
+          "content": "eyJzdGF0dXMiOiAib2sifQ=="
+        }
+      },
+      "assets": []
+    }
+  ]
+}

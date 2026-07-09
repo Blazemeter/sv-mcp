@@ -1,0 +1,48 @@
+{
+  "recordings": [
+    {
+      "id": 1001,
+      "name": "order-recording",
+      "serviceId": 341611,
+      "description": "Captured order flow",
+      "tags": ["billing", "v2"],
+      "runtimeConfig": {
+        "replayCount": 2,
+        "delayBetweenReplays": 500,
+        "initialDelay": 0
+      },
+      "messages": [
+        {
+          "id": 2001,
+          "name": "order-msg-1",
+          "messageType": "TEXT_MESSAGE",
+          "content": "eyJvcmRlcklkIjogIjEyMyJ9",
+          "destination": "ORDER.IN",
+          "destinationType": "QUEUE",
+          "index": 0,
+          "delay": 0,
+          "correlationId": "corr-001",
+          "headers": [{"name": "JMS_MESSAGE_ID", "value": "ID:abc123"}],
+          "properties": [{"name": "orderType", "value": "NEW", "type": "STRING"}],
+          "recordedAt": "2026-06-01T10:00:00Z"
+        }
+      ]
+    }
+  ],
+  "messages": [
+    {
+      "id": 2001,
+      "name": "order-msg-1",
+      "messageType": "TEXT_MESSAGE",
+      "content": "eyJvcmRlcklkIjogIjEyMyJ9",
+      "destination": "ORDER.IN",
+      "destinationType": "QUEUE",
+      "index": 0,
+      "delay": 0,
+      "correlationId": "corr-001",
+      "headers": [{"name": "JMS_MESSAGE_ID", "value": "ID:abc123"}],
+      "properties": [{"name": "orderType", "value": "NEW", "type": "STRING"}],
+      "recordedAt": "2026-06-01T10:00:00Z"
+    }
+  ]
+}

@@ -1,0 +1,27 @@
+[
+  {
+    "id": 347880,
+    "name": "Default workspace",
+    "accountId": 12345,
+    "created": 1709824666,
+    "updated": 1709824666,
+    "enabled": true,
+    "owner": {"id": 1, "name": "Admin"},
+    "allowance": {"concurrency": 100},
+    "membersCount": 5,
+    "locations": [
+      {
+        "id": "harbor-us-east-1",
+        "title": "US East (Private)",
+        "purposes": {"local": true, "serviceMock": true},
+        "limits": {"concurrency": 10, "engines": 5, "duration": 60, "threadsPerEngine": 100}
+      },
+      {
+        "id": "us-east-1",
+        "title": "US East (Public)",
+        "purposes": {"local": true, "serviceMock": true},
+        "limits": {"concurrency": 100, "engines": 50, "duration": 120, "threadsPerEngine": 500}
+      }
+    ]
+  }
+]

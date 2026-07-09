@@ -1,0 +1,19 @@
+[
+  {
+    "id": 12345,
+    "displayName": "Test User",
+    "firstName": "Test",
+    "lastName": "User",
+    "email": "test@example.com",
+    "access": 1709824666,
+    "login": 1709824666,
+    "created": 1709824666,
+    "updated": 1709824666,
+    "timezone": -5,
+    "enabled": true,
+    "defaultProjectId": 1001,
+    "preferences": {
+      "activeWorkspaceId": 347880
+    }
+  }
+]

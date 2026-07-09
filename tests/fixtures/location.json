@@ -1,0 +1,11 @@
+[
+  {
+    "harborId": "harbor-us-east",
+    "shipId": "ship-001",
+    "shipName": "US East (Private)",
+    "kubernetes": false,
+    "metadata": {
+      "portRange": "8000-9000"
+    }
+  }
+]

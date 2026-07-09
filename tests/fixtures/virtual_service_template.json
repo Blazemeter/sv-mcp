@@ -1,0 +1,15 @@
+[
+  {
+    "id": 600,
+    "name": "My Template",
+    "serviceId": 341611,
+    "configurationId": null,
+    "noMatchingRequestPreference": "return404",
+    "replicas": 1,
+    "mockServiceTransactions": [
+      {"txnId": 6485927, "priority": 10, "destinations": []}
+    ],
+    "httpRunnerEnabled": true,
+    "assets": []
+  }
+]

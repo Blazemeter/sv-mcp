@@ -375,7 +375,6 @@ The SDK is bundled in every deployment and exports to the Perforce gRPC collecto
 | Docker image | ✅ Yes | `-e OTEL_EXPORTER_OTLP_ENDPOINT=...` or `-e OTEL_SDK_DISABLED=true` |
 | Standalone binary | ✅ Yes | `--otel-endpoint URL` / `--no-telemetry` |
 | uvx | ✅ Yes | `--otel-endpoint URL` / `--no-telemetry` |
-| pip install | ✅ Yes | `OTEL_EXPORTER_OTLP_ENDPOINT` / `OTEL_SDK_DISABLED` env var |
 
 **Docker (redirect to your own collector):**
 
@@ -385,12 +384,6 @@ docker run --rm -i \
   -e API_KEY_SECRET=your_key_secret \
   -e OTEL_EXPORTER_OTLP_ENDPOINT=http://your-collector:4317 \
   sv-mcp
-```
-
-**pip:**
-
-```bash
-pip install sv-mcp
 ```
 
 **uvx:**

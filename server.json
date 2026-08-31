@@ -1,0 +1,35 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.blazemeter/sv-mcp",
+  "title": "BlazeMeter Service Virtualization",
+  "description": "Manage BlazeMeter virtual services, transactions, assets, configurations, and sandboxes.",
+  "version": "1.0.10",
+  "repository": {
+    "url": "https://github.com/Blazemeter/sv-mcp",
+    "source": "github",
+    "id": "1084422191"
+  },
+  "packages": [
+    {
+      "registryType": "oci",
+      "identifier": "us-docker.pkg.dev/verdant-bulwark-278/sv-mcp/sv-mcp:1.0.10",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "API_KEY_ID",
+          "description": "BlazeMeter API key ID.",
+          "isRequired": true,
+          "isSecret": true
+        },
+        {
+          "name": "API_KEY_SECRET",
+          "description": "BlazeMeter API key secret.",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}

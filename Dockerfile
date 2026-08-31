@@ -17,6 +17,8 @@ RUN uv sync --no-dev --frozen
 # ----------------------------
 FROM python:3.14-slim AS runtime
 
+LABEL io.modelcontextprotocol.server.name="io.github.blazemeter/sv-mcp"
+
 ENV MCP_DOCKER=true
 ENV PYTHONDONTWRITEBYTECODE=1
 # Telemetry defaults to the Perforce gRPC collector. Override the destination

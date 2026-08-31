@@ -492,3 +492,11 @@ To pin a specific version or branch, change the `--from` value:
 
 > [!NOTE]
 > In order to obtain the `API_KEY_ID` and`API_KEY_SECRET` refere to [BlazeMeter API keys](https://help.blazemeter.com/docs/guide/api-blazemeter-api-keys.html)
+
+### MCP Registry publication prerequisite
+
+Before publishing version `1.0.10` to the official MCP Registry, rebuild and republish
+`us-docker.pkg.dev/verdant-bulwark-278/sv-mcp/sv-mcp:1.0.10` from the updated
+`Dockerfile`. The image must contain the label
+`io.modelcontextprotocol.server.name=io.github.blazemeter/sv-mcp`; the manual
+registry publication workflow remains blocked until the public image exposes it.

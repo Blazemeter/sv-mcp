@@ -90,6 +90,7 @@ jobs:
           )"
           if [[ "$label" != "io.github.blazemeter/sv-mcp" ]]; then
             echo "::error::OCI image has missing or incorrect MCP ownership label: $label"
+            echo "::error::Rebuild and republish $MCP_IMAGE from the updated Dockerfile so it contains io.modelcontextprotocol.server.name=io.github.blazemeter/sv-mcp, then retry."
             exit 1
           fi
 

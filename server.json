@@ -19,13 +19,13 @@
       "environmentVariables": [
         {
           "name": "API_KEY_ID",
-          "description": "BlazeMeter API key ID.",
+          "description": "Value of the id field from the downloaded BlazeMeter API credential JSON.",
           "isRequired": true,
           "isSecret": true
         },
         {
           "name": "API_KEY_SECRET",
-          "description": "BlazeMeter API key secret.",
+          "description": "Value of the secret field from the downloaded BlazeMeter API credential JSON.",
           "isRequired": true,
           "isSecret": true
         }

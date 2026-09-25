@@ -45,6 +45,15 @@ class MatcherDsl(BaseModel):
         None,
         description="CDATA XPath expression used for XML CDATA matching. Only used if matcher_name is 'matches_xml_cdata'."
     )
+    sampleBody: Optional[str] = Field(
+        None,
+        description=(
+            "Human-readable request body shown for display purposes on a body matcher. "
+            "The backend auto-populates this from matchingValue for 'equals_json'/'equals_xml' body matchers. "
+            "It can be set explicitly for other matcher names too, but backend support for that has not been "
+            "confirmed against the live API — verify before relying on it broadly."
+        )
+    )
 
     class Config:
         extra = "allow"

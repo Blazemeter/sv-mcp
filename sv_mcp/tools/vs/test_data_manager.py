@@ -445,9 +445,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
           - Headers, query params, cookies: matcherName must be "equals" or "equals_insensitive".
             "contains", "matches", "not_matches" do NOT work with dataset variables.
           - Body (plain text): matcherName "equals"
-          - Body (JSON): matcherName "equals_json" (variables embedded as JSON values e.g. {"id": "${id}"})
-            or "matches_json" with equalTo() helper e.g. [[$.field, equalTo(${id})]]
+          - Body (JSON): "equals_json" (variables embedded as JSON values e.g. {"id": "${id}"}) and
+            "equals_xml" are the ONLY body matchers that get an auto-populated sampleBody. "matches_json"
+            with equalTo() helper e.g. [[$.field, equalTo(${id})]] does NOT get a sampleBody — prefer
+            equals_json/equals_xml when a request payload should be preserved as the sample body.
           - Body (XML): matcherName "equals_xml" or "matches_xml" with matching() helper
+          - matchingValue/sampleBody on body matchers are supplied as plain text — the
+            virtual_services_http_transaction tool base64-encodes/decodes them automatically on
+            create/update/read/list. Do NOT base64-encode them yourself before calling that tool.
           - Response content: base64-encoded string containing ${fieldName} — variables resolve at runtime.
         Additional rules:
           - If the same variable appears multiple times in one transaction (e.g. /test/${id}/${id}?q=${id}),

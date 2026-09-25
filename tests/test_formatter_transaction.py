@@ -3,7 +3,7 @@ from sv_mcp.formatters.transaction import format_http_transactions, format_messa
 
 
 def test_format_http_transactions_happy_path():
-    result = format_http_transactions(load_fixture("transaction")["http"])
+    result = format_http_transactions(load_fixture("transaction")["http"][:1])
     assert len(result) == 1
     t = result[0]
     assert t.id == 6485927
@@ -42,6 +42,59 @@ def test_format_http_transactions_null_path():
 
 def test_format_http_transactions_empty_list():
     assert format_http_transactions([]) == []
+
+
+def test_format_http_transactions_decodes_body_matcher_matching_value():
+    """Backend stores body-matcher matchingValue as base64; formatter must decode for display,
+    symmetric with HttpTransactionManager.to_base64() applied on create/update."""
+    result = format_http_transactions(load_fixture("transaction")["http"])
+    body_matcher = result[1].dsl.requestDsl.body[0]
+    assert body_matcher.matchingValue == '{"foo": "bar"}'
+
+
+def test_format_http_transactions_decodes_body_matcher_sample_body():
+    result = format_http_transactions(load_fixture("transaction")["http"])
+    body_matcher = result[1].dsl.requestDsl.body[0]
+    assert body_matcher.sampleBody == '{"foo": "bar"}'
+
+
+def test_format_http_transactions_leaves_non_base64_matching_value_unchanged():
+    """Non-body matchers (e.g. url/queryParams) are never base64-encoded on the way in,
+    so the formatter must not touch their matchingValue."""
+    result = format_http_transactions(load_fixture("transaction")["http"])
+    assert result[0].dsl.requestDsl.queryParams[0].matchingValue == "1"
+    assert result[0].dsl.requestDsl.url.matchingValue == "/test"
+
+
+def test_format_http_transactions_leaves_non_body_matcher_sample_body_untouched():
+    """sampleBody on a non-body matcher (url/header/query) must not be touched by the decode
+    loop, which only iterates request.body — same guarantee as matchingValue, for both fields."""
+    transaction = {
+        "id": 1,
+        "name": "t1",
+        "serviceId": 1,
+        "dsl": {
+            "requestDsl": {
+                "url": {"key": "url", "matcherName": "equals_url", "matchingValue": "/test",
+                         "sampleBody": "not-base64-should-be-untouched"},
+                "body": [],
+            },
+            "responseDsl": {"status": 200},
+        },
+    }
+    result = format_http_transactions([transaction])
+    assert result[0].dsl.requestDsl.url.sampleBody == "not-base64-should-be-untouched"
+
+
+def test_format_http_transactions_round_trip_no_double_encoding():
+    """A read result fed straight back into create/update's to_base64() must reproduce the
+    original base64 exactly once — not double-encode an already-decoded-then-reencoded value."""
+    from sv_mcp.tools.vs.http_transaction_manager import HttpTransactionManager
+
+    result = format_http_transactions(load_fixture("transaction")["http"])
+    body_matcher = result[1].dsl.requestDsl.body[0]
+    re_encoded = HttpTransactionManager.to_base64(body_matcher.matchingValue)
+    assert re_encoded == "eyJmb28iOiAiYmFyIn0="
 
 
 def test_format_messaging_transactions_happy_path():

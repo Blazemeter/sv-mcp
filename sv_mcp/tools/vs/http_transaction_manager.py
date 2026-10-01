@@ -302,6 +302,14 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                   for that body matcher unless there is a specific reason to use a JSONPath-style matcher —
                   sample bodies on transactions are important to preserve.
                 * Body XML: matcherName "equals_xml" or "matches_xml" with matching() helper
+                * Path matchers ("matches_json" JSONPath, "matches_xml" XPath): the value must be exactly ONE pair
+                  [[<path>, fn(arg)]], where fn is equalTo(value) (exact string match) or matching(regex).
+                  No other function is accepted (not contains, containsString, matches, ...).
+                  Write the argument WITHOUT quotes: quotes are not stripped and would be matched literally.
+                  Example: [[$.messages[0].content, matching(You are a friendly AI assistant.*)]]
+                  For "anything after X" use matching(X.*).
+                  To check several paths, create one matcher per path: extra pairs inside a single matcher
+                  are NOT evaluated.
                 * matchingValue for body matchers is supplied as plain text; the tool base64-encodes it
                   automatically on create/update and decodes it back on read/list — never pre-encode it yourself.
                 * sampleBody (on a body matcher) is optional and settable directly as plain text if you want a

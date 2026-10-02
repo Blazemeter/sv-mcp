@@ -50,6 +50,58 @@
         "redirectUrl": null
       },
       "assets": []
+    },
+    {
+      "id": 6485928,
+      "name": "post test with body",
+      "serviceId": 341611,
+      "type": "HTTP",
+      "dsl": {
+        "type": "HTTP",
+        "priority": 1,
+        "requestDsl": {
+          "method": "POST",
+          "host": "http://localhost",
+          "path": "/test",
+          "url": {
+            "key": "url",
+            "matcherName": "equals_url",
+            "matchingValue": "/test",
+            "optional": false
+          },
+          "headers": [],
+          "queryParams": [],
+          "cookies": [],
+          "credentials": {"username": null, "password": null},
+          "body": [
+            {
+              "key": "body",
+              "matcherName": "equals_json",
+              "matchingValue": "eyJmb28iOiAiYmFyIn0=",
+              "sampleBody": "eyJmb28iOiAiYmFyIn0=",
+              "optional": false
+            }
+          ]
+        },
+        "responseDsl": {
+          "binary": false,
+          "status": 200,
+          "statusMessage": "OK",
+          "proxyUrl": "",
+          "headers": [],
+          "contentType": "text",
+          "content": "",
+          "charset": "UTF-8",
+          "responseDelay": {
+            "type": "none", "lower": 0, "upper": 0, "median": 0.0,
+            "sigma": 0.0, "duration": 0, "chunks": 0, "dribbled": false
+          },
+          "failoverEnabled": false,
+          "statusCodeConditions": []
+        },
+        "redirectUrl": null
+      },
+      "assets": []
     }
   ],
   "messaging": [

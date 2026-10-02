@@ -50,18 +50,16 @@ class HttpTransactionManager:
             params=parameters)
 
     async def create(self, transaction_name: str, workspace_id: int, service_id,
-                     dsl: GenericDsl, delay: int) -> BaseResult:
+                     dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
         request = dsl_dict.get("requestDsl")
+        sample_body_unused = sample_body is not None
         if request:
             if request.get("url") is not None:
                 request["url"]["key"] = "url"
             body_list = request.get("body", [])
-            for body_matcher in body_list:
-                value = body_matcher.get("matchingValue")
-                if value is not None:
-                    body_matcher["matchingValue"] = HttpTransactionManager.to_base64(value)
+            sample_body_unused = HttpTransactionManager._encode_body_matchers(body_list, sample_body)
         if delay:
             response = dsl_dict.get("responseDsl")
             if response:
@@ -82,7 +80,7 @@ class HttpTransactionManager:
         parameters = {
             "serviceId": service_id,
         }
-        return await vs_api_request(
+        result = await vs_api_request(
             self.token,
             "POST",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}",
@@ -90,20 +88,24 @@ class HttpTransactionManager:
             json=transaction_body,
             params=parameters
         )
+        if sample_body_unused and not result.error:
+            result.append_warnings([
+                "sampleBody was provided but the transaction has no body matcher to attach it to "
+                "(dsl.requestDsl.body is empty) — it was not saved."
+            ])
+        return result
 
     async def update(self, id: int, transaction_name: str, workspace_id: int,
-                     dsl: GenericDsl, delay: int) -> BaseResult:
+                     dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
         request = dsl_dict.get("requestDsl")
+        sample_body_unused = sample_body is not None
         if request:
             if request.get("url") is not None:
                 request["url"]["key"] = "url"
             body_list = request.get("body", [])
-            for body_matcher in body_list:
-                value = body_matcher.get("matchingValue")
-                if value is not None:
-                    body_matcher["matchingValue"] = HttpTransactionManager.to_base64(value)
+            sample_body_unused = HttpTransactionManager._encode_body_matchers(body_list, sample_body)
         if delay:
             response = dsl_dict.get("responseDsl")
             if response:
@@ -117,13 +119,19 @@ class HttpTransactionManager:
             "dsl": dsl_dict,
             "name": transaction_name
         }
-        return await vs_api_request(
+        result = await vs_api_request(
             self.token,
             "PUT",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_TRANSACTIONS_ENDPOINT}/{id}",
             result_formatter=format_http_transactions,
             json=transaction_body
         )
+        if sample_body_unused and not result.error:
+            result.append_warnings([
+                "sampleBody was provided but the transaction has no body matcher to attach it to "
+                "(dsl.requestDsl.body is empty) — it was not saved."
+            ])
+        return result
 
     async def assign_asset(self, id: int, workspace_id: int, type: str, assetId: int, alias: str) -> BaseResult:
         assert_type_body = {
@@ -168,8 +176,8 @@ class HttpTransactionManager:
         )
 
     async def create_and_test(self, transaction_name: str, workspace_id: int, service_id: int,
-                              dsl, delay, test_cases: list) -> BaseResult:
-        create_result = await self.create(transaction_name, workspace_id, service_id, dsl, delay)
+                              dsl, delay, test_cases: list, sample_body: Optional[str] = None) -> BaseResult:
+        create_result = await self.create(transaction_name, workspace_id, service_id, dsl, delay, sample_body)
         if create_result.error:
             return create_result
 
@@ -209,27 +217,60 @@ class HttpTransactionManager:
         total = len(test_cases)
         failed = total - passed
         info = [f"transaction_id={transaction_id}", f"tests_passed={passed}", f"tests_total={total}"]
+        create_warnings = create_result.warning or []
 
         if failed == 0:
-            return BaseResult(result=test_results, info=info)
+            result = BaseResult(result=test_results, info=info)
         elif passed == 0:
-            return BaseResult(
+            result = BaseResult(
                 result=test_results,
                 error=f"All {total} test case(s) failed. Check mismatch_reasons in each result "
                       f"and fix the DSL using the update action.",
                 info=info
             )
         else:
-            return BaseResult(
+            result = BaseResult(
                 result=test_results,
                 warning=[f"{failed} of {total} test case(s) failed. Check mismatch_reasons in failing results."],
                 info=info
             )
+        if create_warnings:
+            result.append_warnings(create_warnings)
+        return result
 
     def to_base64(input_str: str) -> str:
         encoded_bytes = base64.b64encode(input_str.encode('utf-8'))
         encoded_str = encoded_bytes.decode('utf-8')
         return encoded_str
+
+    @staticmethod
+    def _encode_body_matchers(body_list: list, sample_body: Optional[str]) -> bool:
+        """Shared by create()/update(): applies the top-level sampleBody fallback, then
+        base64-encodes matchingValue/sampleBody on every body matcher.
+
+        Models consistently reach for a top-level `sampleBody` arg (sibling of dsl/name)
+        instead of nesting it inside a body matcher. That top-level key isn't read anywhere
+        else, so without this fallback it's silently discarded. It's filled into any body
+        matcher that doesn't already carry its own explicit sampleBody — the per-matcher
+        field stays the primary/explicit path.
+
+        Returns True if a top-level sample_body was supplied but there was no body matcher
+        to attach it to, so the caller can surface a warning instead of silently dropping it
+        (the same failure mode this fallback exists to prevent, just with zero matchers).
+        """
+        sample_body_unused = sample_body is not None and not body_list
+        if sample_body is not None:
+            for body_matcher in body_list:
+                if body_matcher.get("sampleBody") is None:
+                    body_matcher["sampleBody"] = sample_body
+        for body_matcher in body_list:
+            value = body_matcher.get("matchingValue")
+            if value is not None:
+                body_matcher["matchingValue"] = HttpTransactionManager.to_base64(value)
+            matcher_sample_body = body_matcher.get("sampleBody")
+            if matcher_sample_body is not None:
+                body_matcher["sampleBody"] = HttpTransactionManager.to_base64(matcher_sample_body)
+        return sample_body_unused
 
 
 def register(mcp, token: Optional[BzmToken]) -> None:
@@ -254,9 +295,25 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 * Headers / query params / cookies: matcherName must be "equals" or "equals_insensitive" only.
                   "contains", "matches", "not_matches" do NOT work with dataset variables.
                 * Body plain text: matcherName "equals"
-                * Body JSON: matcherName "equals_json" (embed as value e.g. {"id": "${id}"})
-                  or "matches_json" with equalTo() e.g. [[$.field, equalTo(${id})]]
+                * Body JSON: "equals_json" (embed as value e.g. {"id": "${id}"}) and "equals_xml" are the
+                  ONLY body matchers that get an auto-populated sampleBody (backend mirrors matchingValue into it).
+                  "matches_json" with equalTo() e.g. [[$.field, equalTo(${id})]] does NOT get a sampleBody.
+                  If a request payload is referenced anywhere in the prompt, default to "equals_json"/"equals_xml"
+                  for that body matcher unless there is a specific reason to use a JSONPath-style matcher —
+                  sample bodies on transactions are important to preserve.
                 * Body XML: matcherName "equals_xml" or "matches_xml" with matching() helper
+                * Path matchers ("matches_json" JSONPath, "matches_xml" XPath): the value must be exactly ONE pair
+                  [[<path>, fn(arg)]], where fn is equalTo(value) (exact string match) or matching(regex).
+                  No other function is accepted (not contains, containsString, matches, ...).
+                  Write the argument WITHOUT quotes: quotes are not stripped and would be matched literally.
+                  Example: [[$.messages[0].content, matching(You are a friendly AI assistant.*)]]
+                  For "anything after X" use matching(X.*).
+                  To check several paths, create one matcher per path: extra pairs inside a single matcher
+                  are NOT evaluated.
+                * matchingValue for body matchers is supplied as plain text; the tool base64-encodes it
+                  automatically on create/update and decodes it back on read/list — never pre-encode it yourself.
+                * sampleBody (on a body matcher) is optional and settable directly as plain text if you want a
+                  display value different from matchingValue; it is likewise base64-encoded/decoded by the tool.
                 * Response content: base64-encode the string containing ${fieldName} — resolves at runtime.
               Extra rules:
                 * Same variable used multiple times (path + header + body) must match the SAME value in the request.
@@ -290,6 +347,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             On all-fail: error contains the failure summary; transaction still exists — use update to fix the DSL,
             then re-init with virtual_services_sandbox init and re-test with virtual_services_sandbox test_request.
             On partial fail: warning lists failures; transaction still exists.
+            Same sampleBody placement and plain-text/no-pre-encoding rules as `create` apply here — see `create`.
             args:
                 name (str): Mandatory. The name of the transaction.
                 serviceId (int): Mandatory. The id of the service.
@@ -299,6 +357,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 test_cases (list[SandboxRequest]): Mandatory. At least one test request.
                     Each entry has: method (str), path (str), name (str),
                     queryParameters (list, optional), headers (list, optional), content (str base64, optional).
+                sampleBody (str): Optional. Fallback only — prefer setting sampleBody on the body matcher itself.
             Returns:
                 info: ["transaction_id=<id>", "tests_passed=<n>", "tests_total=<n>"]
                 result: List of SandboxResponse per test case.
@@ -309,23 +368,42 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     On sandbox init failure, info still contains transaction_id so the transaction can be recovered.
                 warning: Some (not all) test cases failed.
         - create: Create a new HTTP transaction.
-            Important: before using template in transaction definition validate it and 
+            Important: before using template in transaction definition validate it and
             convert it first using validate_template and convert_template actions.
+            IMPORTANT — sampleBody placement: put it INSIDE the body matcher object, not as a
+            top-level sibling of name/dsl/workspace_id.
+            Correct shape:
+                dsl.requestDsl.body = [
+                    {"key": "body", "matcherName": "equals_json",
+                     "matchingValue": "{\\"foo\\": \\"bar\\"}",
+                     "sampleBody": "{\\"foo\\": \\"bar\\"}"}
+                ]
+            matchingValue and sampleBody are ALWAYS supplied as plain text. Do NOT base64-encode
+            them yourself before calling this tool (e.g. do not run a manual base64 command on the
+            payload first) — this tool base64-encodes them on create/update and decodes them back
+            on read/list automatically. Pre-encoding yourself causes a double-encoded value.
+            A top-level `sampleBody` arg is also accepted as a defensive fallback: it is applied to
+            any body matcher missing its own sampleBody, and if there is no body matcher at all to
+            attach it to, the response comes back with a warning saying so. The per-matcher
+            placement above is still the correct, primary way; do not rely on the fallback.
             args(Transaction): A Transaction object with the following fields:
                 name (str): Mandatory. The name of the transaction.
                 serviceId (int): Mandatory. The id of the service to create the transaction in.
                 dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
                 workspace_id (int): Mandatory. The id of the workspace.
                 delay (int): Optional. Response delay in milliseconds.
+                sampleBody (str): Optional. Fallback only — prefer setting sampleBody on the body matcher itself.
         - update: Updates a certain transaction.
-            Important: before using template in transaction definition validate it and  
+            Important: before using template in transaction definition validate it and
             convert it first using validate_template and convert_template actions.
+            Same sampleBody placement and plain-text/no-pre-encoding rules as `create` apply here.
             args(Transaction): A Transaction object with the following fields:
                 id (int): Mandatory. The id of the transaction.
                 name (str): Mandatory. The new name of the transaction.
                 dsl (GenericDsl): Mandatory. The DSL definition of the transaction.
-                workspace_id (int): Mandatory. The id of the workspace. 
+                workspace_id (int): Mandatory. The id of the workspace.
                 delay (int): Optional. Response delay in milliseconds.
+                sampleBody (str): Optional. Fallback only — prefer setting sampleBody on the body matcher itself.
         - assign_keystore: Assign keystore asset to the transaction.
             args(dict):
                 id (int): Mandatory. The id of the transaction.
@@ -362,12 +440,12 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "create":
                     return await transaction_manager.create(
                         args["name"], args["workspace_id"], args["serviceId"],
-                        args["dsl"], args.get("delay", None),
+                        args["dsl"], args.get("delay", None), args.get("sampleBody"),
                     )
                 case "update":
                     return await transaction_manager.update(
                         args["id"], args["name"], args["workspace_id"],
-                        args["dsl"], args.get("delay", None),
+                        args["dsl"], args.get("delay", None), args.get("sampleBody"),
                     )
                 case "validate_template":
                     return await transaction_manager.validate_template(args["template"])
@@ -377,6 +455,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                     return await transaction_manager.create_and_test(
                         args["name"], args["workspace_id"], args["serviceId"],
                         args["dsl"], args.get("delay", None), args["test_cases"],
+                        args.get("sampleBody"),
                     )
                 case "assign_keystore":
                     return await transaction_manager.assign_asset(

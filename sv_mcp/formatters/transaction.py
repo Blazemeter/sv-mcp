@@ -1,3 +1,4 @@
+import base64
 from typing import (List, Any, Optional)
 
 from sv_mcp.models.vs.assigned_asset import AssignedAsset
@@ -8,16 +9,34 @@ from sv_mcp.models.vs.messaging_dsl import MessagingDsl
 from sv_mcp.models.vs.messaging_transaction import MessagingTransaction
 
 
+def _decode_body_matcher_value(value: Optional[str]) -> Optional[str]:
+    """Backend stores body-matcher matchingValue/sampleBody as base64; decode for display,
+    symmetric with HttpTransactionManager.to_base64() applied on create/update."""
+    if not value:
+        return value
+    try:
+        return base64.b64decode(value + "=" * (-len(value) % 4), validate=True).decode("utf-8")
+    except Exception:
+        return value
+
+
 def format_http_transactions(transactions: List[Any], params: Optional[dict] = None) -> List[HttpTransaction]:
     formatted_transactions = []
     for transaction in transactions:
+        dsl_dict = transaction.get("dsl") or {}
+        request = dsl_dict.get("requestDsl") or {}
+        for body_matcher in request.get("body") or []:
+            if "matchingValue" in body_matcher:
+                body_matcher["matchingValue"] = _decode_body_matcher_value(body_matcher.get("matchingValue"))
+            if "sampleBody" in body_matcher:
+                body_matcher["sampleBody"] = _decode_body_matcher_value(body_matcher.get("sampleBody"))
         formatted_transactions.append(
             HttpTransaction(
                 id=transaction.get("id"),
                 name=transaction.get("name"),
                 serviceId=transaction.get("serviceId"),
                 type=transaction.get("type"),
-                dsl=GenericDsl(**transaction.get("dsl")),
+                dsl=GenericDsl(**dsl_dict),
                 assets=[AssignedAsset(**d) for d in transaction.get("assets") or []],
             )
         )

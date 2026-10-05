@@ -1,0 +1,14 @@
+[
+  {
+    "blazeDataDetailLinksDto": {
+      "dataFileLink": "https://storage.blazemeter.com/blazedata/55001/data.json",
+      "previewFileLink": "https://storage.blazemeter.com/blazedata/55001/preview.json",
+      "modelFileLink": "https://storage.blazemeter.com/blazedata/55001/model.json"
+    },
+    "globalVariables": {
+      "order_counter": "3",
+      "region": "eu-west"
+    },
+    "dataSettings": null
+  }
+]

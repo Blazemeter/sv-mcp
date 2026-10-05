@@ -94,10 +94,10 @@ server.py         → Tool registration hub (respects MCP_ENABLED_TOOLS filterin
 telemetry.py      → OTel helpers: init_telemetry() + run_tool() span wrapper
 tools/            → MCP tool implementations (async def register(mcp, token))
   utils.py        → Centralized httpx client (HTTP/2, basic auth, timeouts)
-  vs/             → 14 Virtual Service tool managers
+  vs/             → Virtual Service tool managers
 models/           → Pydantic data models
   result.py       → BaseResult wrapper (result, error, total, has_more, info, warning)
-  vs/             → VS domain models (37 files)
+  vs/             → VS domain models
     sandbox_response.py → SandboxResponse: matched bool + mismatch_reasons derived from matchingLog
 formatters/       → Transform raw API responses into domain models
 config/
@@ -128,13 +128,14 @@ accounts → workspaces → locations → services → transactions → virtual 
 - Use `activeWorkspaceId` from the user object as default `workspace_id`
 - `list_*` actions return minimal info; `read_*` actions return full details
 - Transactions (HTTP or messaging) are defined before creating virtual services
+- **Stateful virtual services**: state is the virtual service's own copy of its service data (TDM data entities + global variables). `STATE_UPDATE` processing actions (`virtual_services_action create_state_update`) change it, transactions read it with `${#each (blazeData …)}`, `${blazeDataSize …}` or `${globalName}`, and `virtual_services_state reset` restores it. The `STATE_UPDATE` definition is not in the public API docs, so it is a pass-through dict. The API answers a bad `objectAction` or filter `operation` with HTTP 500, so `action_manager.py` checks the definition first.
 - Sandbox testing validates HTTP transactions without deployment. Use `create_and_test` action (not `create`) when the DSL contains Handlebars templates — it creates the transaction and runs sandbox validation in one step. `SandboxResponse.matched` is `True` when the request matched; `mismatch_reasons` lists why it didn't when `matched=False`.
 
-## Tool Categories (14 total)
+## Tool Categories (18 total)
 
 Core: `blazemeter_user`, `blazemeter_account`, `blazemeter_workspaces`
 
-Virtual Services: `virtual_services_service`, `virtual_services_http_transaction`, `virtual_services_messaging_transaction`, `virtual_services_virtual_service`, `virtual_services_virtual_service_template`, `virtual_services_action`, `virtual_services_asset`, `virtual_services_configuration`, `virtual_services_sandbox`, `virtual_services_location`, `virtual_services_tracking`
+Virtual Services: `virtual_services_service`, `virtual_services_http_transaction`, `virtual_services_messaging_transaction`, `virtual_services_virtual_service`, `virtual_services_messaging_virtual_service`, `virtual_services_virtual_service_template`, `virtual_services_action`, `virtual_services_asset`, `virtual_services_configuration`, `virtual_services_sandbox`, `virtual_services_location`, `virtual_services_tracking`, `virtual_services_test_data`, `virtual_services_recording`, `virtual_services_state`
 
 ## Design Docs
 

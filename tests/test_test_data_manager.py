@@ -1,4 +1,12 @@
+import pytest
+from unittest.mock import AsyncMock, MagicMock, patch
+
+from conftest import load_fixture
+from sv_mcp.formatters.test_data import format_tdm_assets
+from sv_mcp.models.result import BaseResult
 from sv_mcp.tools.vs.test_data_manager import build_data_model_content, build_data_model_content_from_csv
+# Aliased so pytest does not try to collect the manager class as a test class
+from sv_mcp.tools.vs.test_data_manager import TestDataManager as DataManager
 
 
 def test_build_data_model_content_schema_and_kind():
@@ -115,3 +123,219 @@ def test_build_data_model_content_from_csv_uuid_unique():
     r1 = build_data_model_content_from_csv("svc", 1, "data.csv", ["a"])
     r2 = build_data_model_content_from_csv("svc", 1, "data.csv", ["a"])
     assert r1["id"] != r2["id"]
+
+
+GLOBAL_ENTITY_ASSET = {
+    "id": "ge-uuid-3333",
+    "name": "global-entity-123",
+    "displayName": "global-entity-123",
+    "type": "global-entity",
+    "packageId": "pkg-uuid-4444",
+    "dataAccessible": True,
+}
+
+ENTITIES = [{"name": "orders", "fields": [{"name": "id", "generator": "sequenceGenerator(1)"}]}]
+
+
+@pytest.fixture
+def manager():
+    return DataManager(token=MagicMock(), ctx=MagicMock())
+
+
+@pytest.fixture
+def csv_file(tmp_path):
+    path = tmp_path / "orders.csv"
+    path.write_text("id,status\n1,NEW\n")
+    return str(path)
+
+
+async def test_read_global_variables_returns_parsed_content(manager):
+    asset = {**GLOBAL_ENTITY_ASSET, "data": {"content": '{"order_counter": "0"}'}}
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[asset])
+        result = await manager.read_global_variables(workspace_id=1, service_id=123)
+    assert mock_req.call_args.args[1] == "GET"
+    assert mock_req.call_args.args[2] == "/workspaces/1/assets"
+    assert mock_req.call_args.kwargs["params"] == [
+        ("q", "type=global-entity"), ("q", "name=global-entity-123"), ("withData", "true"),
+    ]
+    assert result.error is None
+    assert result.result == [{"order_counter": "0"}]
+
+
+async def test_read_global_variables_empty_map(manager):
+    asset = {**GLOBAL_ENTITY_ASSET, "data": {"content": {}}}
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[asset])
+        result = await manager.read_global_variables(workspace_id=1, service_id=123)
+    assert result.result == [{}]
+
+
+async def test_read_global_variables_not_found(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        result = await manager.read_global_variables(workspace_id=1, service_id=123)
+    assert "No global-entity asset found for service_id=123" in result.error
+    assert "create_from_schema" in result.error
+    assert result.result is None
+
+
+async def test_read_global_variables_passes_fetch_error_through(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(error="Access forbidden")
+        result = await manager.read_global_variables(workspace_id=1, service_id=123)
+    assert result.error == "Access forbidden"
+
+
+async def test_set_global_variables_replaces_content_and_keeps_asset_fields(manager):
+    raw_asset = {**GLOBAL_ENTITY_ASSET, "data": {"content": {"stale": "1"}}}
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=[raw_asset]), BaseResult(result=[])]
+        await manager.set_global_variables(
+            workspace_id=1, service_id=123, global_variables={"order_counter": "5"}
+        )
+    fetch_call, put_call = mock_req.call_args_list
+    assert fetch_call.args[1] == "GET"
+    assert fetch_call.kwargs["params"] == [
+        ("q", "type=global-entity"), ("q", "name=global-entity-123"), ("withData", "false"),
+    ]
+    assert put_call.args[1] == "PUT"
+    assert put_call.args[2] == "/workspaces/1/assets/ge-uuid-3333"
+    assert put_call.kwargs["result_formatter"] is format_tdm_assets
+    assert put_call.kwargs["json"] == {
+        **GLOBAL_ENTITY_ASSET,
+        "data": {
+            "fileName": "global-entity.json",
+            "contentType": "application/json",
+            "content": {"order_counter": "5"},
+        },
+    }
+
+
+async def test_set_global_variables_not_found_makes_no_put(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        result = await manager.set_global_variables(
+            workspace_id=1, service_id=123, global_variables={"order_counter": "0"}
+        )
+    assert mock_req.call_count == 1
+    assert "No global-entity asset found for service_id=123" in result.error
+
+
+async def test_update_sets_global_variables_when_given(manager):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        result = await manager.update(
+            1, 123, "my-service", ENTITIES, global_variables={"order_counter": "0"}
+        )
+    assert mock_req.call_args.args[1] == "PUT"
+    manager.set_global_variables.assert_awaited_once_with(1, 123, {"order_counter": "0"})
+    assert result.error is None
+
+
+async def test_update_skips_global_variables_when_none(manager):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        await manager.update(1, 123, "my-service", ENTITIES)
+    manager.set_global_variables.assert_not_awaited()
+
+
+async def test_update_warns_when_global_variables_fail(manager):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(error="No global-entity asset found"))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        result = await manager.update(
+            1, 123, "my-service", ENTITIES, global_variables={"order_counter": "0"}
+        )
+    assert result.error is None
+    assert result.warning == ["Data model updated, but global variables were not: No global-entity asset found"]
+
+
+async def test_update_rejects_non_string_global_variables_before_any_call(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        result = await manager.update(1, 123, "my-service", ENTITIES, global_variables={"order_counter": 0})
+    assert result.error.startswith("global_variables must be a flat map of names to string values")
+    mock_req.assert_not_called()
+
+
+async def test_set_global_variables_rejects_non_dict(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        result = await manager.set_global_variables(1, 123, '{"order_counter": "0"}')
+    assert result.error.startswith("global_variables must be a flat map")
+    mock_req.assert_not_called()
+
+
+async def test_update_skips_global_variables_when_data_model_put_fails(manager):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(error="PUT failed")]
+        result = await manager.update(
+            1, 123, "my-service", ENTITIES, global_variables={"order_counter": "0"}
+        )
+    assert result.error == "PUT failed"
+    manager.set_global_variables.assert_not_awaited()
+
+
+async def test_update_from_csv_sets_global_variables_when_given(manager, csv_file):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        result = await manager.update_from_csv(
+            1, 123, "my-service", csv_file, global_variables={"order_counter": "0"}
+        )
+    assert mock_req.call_args.args[1] == "PUT"
+    manager.set_global_variables.assert_awaited_once_with(1, 123, {"order_counter": "0"})
+    assert result.error is None
+
+
+async def test_update_from_csv_skips_global_variables_when_none(manager, csv_file):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        await manager.update_from_csv(1, 123, "my-service", csv_file)
+    manager.set_global_variables.assert_not_awaited()
+
+
+async def test_update_from_csv_warns_when_global_variables_fail(manager, csv_file):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(error="No global-entity asset found"))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        result = await manager.update_from_csv(
+            1, 123, "my-service", csv_file, global_variables={"order_counter": "0"}
+        )
+    assert result.error is None
+    assert result.warning == ["Data model updated, but global variables were not: No global-entity asset found"]
+
+
+async def test_update_from_csv_with_upload_sets_global_variables_after_upload(manager, csv_file):
+    manager.set_global_variables = AsyncMock(return_value=BaseResult(result=[]))
+    manager._upload_csv_file = AsyncMock(return_value=BaseResult(result=[]))
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.side_effect = [BaseResult(result=load_fixture("tdm_asset")), BaseResult(result=[])]
+        result = await manager.update_from_csv(
+            1, 123, "my-service", csv_file, upload_csv=True, global_variables={"order_counter": "0"}
+        )
+    manager._upload_csv_file.assert_awaited_once()
+    manager.set_global_variables.assert_awaited_once_with(1, 123, {"order_counter": "0"})
+    assert result.error is None
+
+
+async def test_global_variables_ignore_assets_whose_name_only_partially_matches(manager):
+    """set_global_variables replaces the whole map, so it must never write another service's asset."""
+    other_service_asset = {**GLOBAL_ENTITY_ASSET, "id": "ge-other", "name": "global-entity-1234"}
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[other_service_asset])
+        result = await manager.set_global_variables(
+            workspace_id=1, service_id=123, global_variables={"order_counter": "0"}
+        )
+    assert mock_req.call_count == 1
+    assert "No global-entity asset found for service_id=123" in result.error
+
+
+async def test_create_from_schema_rejects_non_string_global_variables_before_any_call(manager):
+    with patch("sv_mcp.tools.vs.test_data_manager.tdm_api_request") as mock_req:
+        result = await manager.create_from_schema(1, 123, "my-service", ENTITIES, global_variables={"count": 0})
+    mock_req.assert_not_called()
+    assert result.error.startswith("global_variables must be a flat map")

@@ -54,7 +54,13 @@ async def _api_request(base_url: str,
             resp.raise_for_status()
             if resp.status_code == 204 or not resp.content:
                 return BaseResult()
-            data = resp.json()
+            # Accept a plain-text or bare JSON body as well as the {"result": ...} envelope.
+            try:
+                data = resp.json()
+            except ValueError:
+                return BaseResult(result=[resp.text], total=1)
+            if not isinstance(data, dict):
+                data = {"result": data}
 
             result = data.get("result", [])
             default_total = 0

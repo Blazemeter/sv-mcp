@@ -60,10 +60,7 @@ class MessagingTransactionManager:
         MessagingTransactionManager._normalize_dsl_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         if request:
-            for body_matcher in request.get("body", []):
-                value = body_matcher.get("matchingValue")
-                if value is not None:
-                    body_matcher["matchingValue"] = MessagingTransactionManager.to_base64(value)
+            MessagingTransactionManager._encode_body_matchers(request.get("body", []))
         if delay:
             response = dsl_dict.get("responseDsl")
             if response:
@@ -110,6 +107,9 @@ class MessagingTransactionManager:
         dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
         dsl_dict.setdefault("type", "MESSAGING")
         MessagingTransactionManager._normalize_dsl_content(dsl_dict)
+        request = dsl_dict.get("requestDsl")
+        if request:
+            MessagingTransactionManager._encode_body_matchers(request.get("body", []))
 
         body: Dict[str, Any] = {
             "id": id,
@@ -181,6 +181,18 @@ class MessagingTransactionManager:
         encoded_bytes = base64.b64encode(input_str.encode('utf-8'))
         encoded_str = encoded_bytes.decode('utf-8')
         return encoded_str
+
+    @staticmethod
+    def _encode_body_matchers(body_list: list) -> None:
+        """Shared by create()/update(): base64-encodes matchingValue/sampleBody on every
+        body matcher, symmetric with the decode in format_messaging_transactions()."""
+        for body_matcher in body_list:
+            value = body_matcher.get("matchingValue")
+            if value is not None:
+                body_matcher["matchingValue"] = MessagingTransactionManager.to_base64(value)
+            matcher_sample_body = body_matcher.get("sampleBody")
+            if matcher_sample_body is not None:
+                body_matcher["sampleBody"] = MessagingTransactionManager.to_base64(matcher_sample_body)
 
     @staticmethod
     def _normalize_dsl_content(dsl_dict: dict) -> None:
@@ -364,8 +376,12 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 template (str): Mandatory. The handlebars template to validate.
                 encode (bool, default=True): Whether to encode the converted template to Base64.
         - create: Create a new transaction.
-            Important: before using template in transaction definition validate it and 
+            Important: before using template in transaction definition validate it and
             convert it first using validate_template and convert_template actions.
+            Body matcher matchingValue/sampleBody (dsl.requestDsl.body[].matchingValue /
+            dsl.requestDsl.body[].sampleBody) are supplied as plain text; the tool base64-encodes
+            them automatically on create/update and decodes them back on read/list — never
+            pre-encode them yourself.
             args(Transaction): A Transaction object with the following fields:
                 name (str): Mandatory. The name of the transaction.
                 serviceId (int): Mandatory. The id of the service to create the transaction in.
@@ -379,8 +395,10 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 messagingTransactionMappings (dict): Optional. {sourceName, sourceType, destinations: [{destinationName, destinationType}]}.
                 sampleBody (str): Optional. Example request body for documentation.
         - update: Updates a certain transaction.
-            Important: before using template in transaction definition validate it and  
+            Important: before using template in transaction definition validate it and
             convert it first using validate_template and convert_template actions.
+            Same body matcher matchingValue/sampleBody plain-text/no-pre-encoding rules as
+            `create` apply here.
             args(Transaction): A Transaction object with the following fields:
                 id (int): Mandatory. The id of the transaction.
                 name (str): Mandatory. The new name of the transaction.

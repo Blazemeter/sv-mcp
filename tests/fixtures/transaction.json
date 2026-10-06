@@ -117,7 +117,10 @@
           "properties": [
             {"key": "orderType", "matcherName": "equals", "matchingValue": "NEW", "optional": false}
           ],
-          "body": []
+          "body": [
+            {"key": "body", "matcherName": "equals_json", "matchingValue": "eyJmb28iOiAiYmFyIn0=",
+             "sampleBody": "eyJmb28iOiAiYmFyIn0=", "optional": false}
+          ]
         },
         "responseDsl": {
           "headers": [],

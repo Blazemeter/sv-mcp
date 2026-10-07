@@ -85,7 +85,9 @@ async def _api_request(base_url: str,
                 return BaseResult(error=f"Access forbidden (check workspace permissions): {server_msg}")
             return BaseResult(error=str(server_msg) or str(e))
         except httpx.HTTPError as e:
-            return BaseResult(error=f"HTTP error: {e}")
+            # Some httpx errors (e.g. timeouts) stringify to "", so always name the type.
+            detail = f"{type(e).__name__}: {e}" if str(e) else type(e).__name__
+            return BaseResult(error=f"HTTP error: {detail}")
 
 # Thin wrappers
 async def bzm_api_request(token: Optional[BzmToken], method: str, endpoint: str,

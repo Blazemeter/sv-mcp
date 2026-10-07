@@ -287,11 +287,16 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             not as a matcher.
             - Assign intermediate values with {{#assign "varName"}}{{value}}{{/assign}}.
             - Keep JSON objects outside helper calls; helpers should only produce values.
+            - A helper's output is inserted as raw text, so inside JSON wrap string values in quotes,
+              e.g. {"id": "{{jsonPath request.body '$.id'}}"} - without the quotes the response is invalid JSON.
             - Do not nest helpers more than 1–2 levels deep.
             - Each helper must have exactly one opening and one closing brace; do not add extra # or braces.
             - Use handlebars helpers supported by wiremock, specified in https://wiremock.org/docs/response-templating/
             - Use validate_template and convert_template actions to validate and convert templates before using them in transaction definition.
             - Dataset variables (from virtual_services_test_data) are referenced with ${fieldName} syntax, NOT Handlebars.
+              ${fieldName} is not a wildcard and does not capture request values: without a dataset it is
+              matched as literal text. To accept any value for a field use a path matcher with matching(.+),
+              e.g. [[$.id, matching(.+)]]; to put a request value into the response use Handlebars.
               Matcher name rules — MUST follow exactly:
                 * URL path with ${fieldName}: matcherName MUST be "equals_url". NEVER use "matches_url" with variables.
                 * Headers / query params / cookies: matcherName must be "equals" or "equals_insensitive" only.

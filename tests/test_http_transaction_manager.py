@@ -389,3 +389,25 @@ async def test_create_without_response_content_leaves_it_absent(manager):
         await manager.create("t", 1, 2, _dsl_with_response_content(None), None)
     response = mock_req.call_args.kwargs["json"]["transactions"][0]["dsl"]["responseDsl"]
     assert "content" not in response
+
+
+def _http_tool_description():
+    from sv_mcp.tools.vs import http_transaction_manager
+    mcp = _CapturingMCP()
+    http_transaction_manager.register(mcp, token=None)
+    return mcp.descriptions["virtual_services_http_transaction"]
+
+
+def test_description_says_dataset_variables_are_not_wildcards():
+    """A model used ${shipmentId} in an equals_json matcher to mean "any id" and got a 404:
+    without a dataset it is matched as literal text."""
+    description = _http_tool_description()
+    assert "not a wildcard" in description
+    assert "matching(.+)" in description
+
+
+def test_description_says_to_quote_template_strings_in_json():
+    """A model wrote {"shipmentId": {{jsonPath ...}}} and the mock returned invalid JSON
+    ({"shipmentId": S-400}) - helper output is raw text, so strings need quotes."""
+    description = _http_tool_description()
+    assert "\"{{jsonPath request.body '$.id'}}\"" in description

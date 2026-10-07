@@ -12,7 +12,7 @@ from sv_mcp.formatters.validations import format_validation_request
 from sv_mcp.models.result import BaseResult
 from sv_mcp.models.vs.messaging_transaction import MessagingTransaction
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import vs_api_request, error_result
+from sv_mcp.tools.utils import vs_api_request, error_result, normalize_response_content
 
 
 class MessagingTransactionManager:
@@ -57,7 +57,7 @@ class MessagingTransactionManager:
                      sample_body: Optional[str] = None) -> BaseResult:
         dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
         dsl_dict.setdefault("type", "MESSAGING")
-        MessagingTransactionManager._normalize_dsl_content(dsl_dict)
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         if request:
             MessagingTransactionManager._encode_body_matchers(request.get("body", []))
@@ -106,7 +106,7 @@ class MessagingTransactionManager:
                      sample_body: Optional[str] = None) -> BaseResult:
         dsl_dict = dsl.model_dump() if hasattr(dsl, "model_dump") else dsl
         dsl_dict.setdefault("type", "MESSAGING")
-        MessagingTransactionManager._normalize_dsl_content(dsl_dict)
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         if request:
             MessagingTransactionManager._encode_body_matchers(request.get("body", []))
@@ -193,20 +193,6 @@ class MessagingTransactionManager:
             matcher_sample_body = body_matcher.get("sampleBody")
             if matcher_sample_body is not None:
                 body_matcher["sampleBody"] = MessagingTransactionManager.to_base64(matcher_sample_body)
-
-    @staticmethod
-    def _normalize_dsl_content(dsl_dict: dict) -> None:
-        """Ensure responseDsl.content is valid base64. Auto-encodes plain text in place."""
-        response_dsl = dsl_dict.get("responseDsl")
-        if not isinstance(response_dsl, dict):
-            return
-        content = response_dsl.get("content")
-        if not content:
-            return
-        try:
-            base64.b64decode(content + '=' * (-len(content) % 4), validate=True)
-        except Exception:
-            response_dsl["content"] = base64.b64encode(content.encode('utf-8')).decode('utf-8')
 
 
 def register(mcp, token: Optional[BzmToken]) -> None:

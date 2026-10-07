@@ -1,6 +1,7 @@
 """
 Simple utilities for BlazeMeter MCP tools.
 """
+import base64
 import logging
 import os
 import platform
@@ -149,3 +150,18 @@ def error_result(exc: Exception) -> BaseResult:
 
 def get_date_time_iso(timestamp: Optional[int]) -> Optional[str]:
     return datetime.fromtimestamp(timestamp).isoformat() if timestamp is not None else None
+
+
+def normalize_response_content(dsl_dict: dict) -> None:
+    """Ensure responseDsl.content is valid base64. Auto-encodes plain text in place.
+    Already-base64 values (e.g. convert_template output) are kept, so they are not double-encoded."""
+    response_dsl = dsl_dict.get("responseDsl")
+    if not isinstance(response_dsl, dict):
+        return
+    content = response_dsl.get("content")
+    if not content:
+        return
+    try:
+        base64.b64decode(content + '=' * (-len(content) % 4), validate=True)
+    except Exception:
+        response_dsl["content"] = base64.b64encode(content.encode('utf-8')).decode('utf-8')

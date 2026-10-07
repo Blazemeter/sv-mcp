@@ -338,3 +338,54 @@ def test_create_and_test_description_documents_body_not_content():
     test_cases_doc = description.split("test_cases (list[SandboxRequest])", 1)[1].split("sampleBody", 1)[0]
     assert "content" not in test_cases_doc
     assert "body" in test_cases_doc
+
+
+def _dsl_with_response_content(content):
+    response = {"status": 201}
+    if content is not None:
+        response["content"] = content
+    return {
+        "requestDsl": {"method": "POST", "url": {"key": "url", "matcherName": "equals_url", "matchingValue": "/x"}},
+        "responseDsl": response,
+    }
+
+
+@pytest.mark.asyncio
+async def test_create_encodes_plain_text_response_content(manager):
+    """The backend rejects non-base64 responseDsl.content ("Request body is empty or has
+    invalid format."), so plain text described by a user must be encoded by the tool."""
+    with patch("sv_mcp.tools.vs.http_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.create("t", 1, 2, _dsl_with_response_content('{"accepted": true}'), None)
+    content = mock_req.call_args.kwargs["json"]["transactions"][0]["dsl"]["responseDsl"]["content"]
+    assert base64.b64decode(content).decode() == '{"accepted": true}'
+
+
+@pytest.mark.asyncio
+async def test_create_preserves_base64_response_content(manager):
+    """convert_template returns base64 and the docs tell models to use it as-is -
+    it must not be double-encoded."""
+    encoded = base64.b64encode(b'{"accepted": true}').decode()
+    with patch("sv_mcp.tools.vs.http_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.create("t", 1, 2, _dsl_with_response_content(encoded), None)
+    content = mock_req.call_args.kwargs["json"]["transactions"][0]["dsl"]["responseDsl"]["content"]
+    assert content == encoded
+
+
+@pytest.mark.asyncio
+async def test_update_encodes_plain_text_response_content(manager):
+    with patch("sv_mcp.tools.vs.http_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.update(10, "t", 1, _dsl_with_response_content('{"accepted": true}'), None)
+    content = mock_req.call_args.kwargs["json"]["dsl"]["responseDsl"]["content"]
+    assert base64.b64decode(content).decode() == '{"accepted": true}'
+
+
+@pytest.mark.asyncio
+async def test_create_without_response_content_leaves_it_absent(manager):
+    with patch("sv_mcp.tools.vs.http_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.create("t", 1, 2, _dsl_with_response_content(None), None)
+    response = mock_req.call_args.kwargs["json"]["transactions"][0]["dsl"]["responseDsl"]
+    assert "content" not in response

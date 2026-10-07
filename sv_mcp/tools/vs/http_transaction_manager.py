@@ -16,7 +16,7 @@ from sv_mcp.models.vs.http_transaction import HttpTransaction
 from sv_mcp.models.vs.matching_log_entry import MatchingLogEntry
 from sv_mcp.models.vs.sandbox_response import SandboxResponse
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import vs_api_request, error_result
+from sv_mcp.tools.utils import vs_api_request, error_result, normalize_response_content
 from sv_mcp.tools.vs.sandbox_manager import SandboxManager
 
 
@@ -53,6 +53,7 @@ class HttpTransactionManager:
                      dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         sample_body_unused = sample_body is not None
         if request:
@@ -99,6 +100,7 @@ class HttpTransactionManager:
                      dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         sample_body_unused = sample_body is not None
         if request:

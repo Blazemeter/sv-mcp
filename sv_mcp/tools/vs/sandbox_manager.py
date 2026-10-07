@@ -1,3 +1,4 @@
+import base64
 from typing import Optional, Dict, Any
 
 import httpx
@@ -34,6 +35,9 @@ class SandboxManager:
         return result
 
     async def test_request(self, request: SandboxRequest, workspace_id: int) -> BaseResult:
+        body = request.get("body")
+        if body is not None:
+            request["body"] = base64.b64encode(body.encode("utf-8")).decode("utf-8")
         sandbox_request = {
             "httpRequest": request,
         }

@@ -147,6 +147,27 @@ def test_format_messaging_transactions_transaction_mapping():
     assert tm.destinations[0].destinationName == "ORDER.OUT"
 
 
+def test_format_messaging_transactions_decodes_body_matcher_matching_value():
+    """Backend stores body-matcher matchingValue as base64; formatter must decode for display,
+    symmetric with MessagingTransactionManager.to_base64() applied on create/update."""
+    result = format_messaging_transactions(load_fixture("transaction")["messaging"])
+    body_matcher = result[0].dsl.requestDsl.body[0]
+    assert body_matcher.matchingValue == '{"foo": "bar"}'
+
+
+def test_format_messaging_transactions_decodes_body_matcher_sample_body():
+    result = format_messaging_transactions(load_fixture("transaction")["messaging"])
+    body_matcher = result[0].dsl.requestDsl.body[0]
+    assert body_matcher.sampleBody == '{"foo": "bar"}'
+
+
+def test_format_messaging_transactions_leaves_non_body_matcher_matching_value_unchanged():
+    """Non-body matchers (e.g. properties/headers) are never base64-encoded on the way in,
+    so the formatter must not touch their matchingValue."""
+    result = format_messaging_transactions(load_fixture("transaction")["messaging"])
+    assert result[0].dsl.requestDsl.properties[0].matchingValue == "NEW"
+
+
 def test_format_messaging_transactions_tags_and_priority():
     fixture = load_fixture("transaction")
     fixture["messaging"][0]["tags"] = ["billing", "v2"]

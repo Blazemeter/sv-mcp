@@ -158,6 +158,96 @@ async def test_create_with_extra_fields(manager):
     assert txn["sampleBody"] == "hello"
 
 
+async def test_create_encodes_body_matcher_matching_value(manager):
+    with patch("sv_mcp.tools.vs.messaging_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.create(
+            transaction_name="t1",
+            workspace_id=1,
+            service_id=2,
+            type="MESSAGING",
+            dsl={
+                "requestDsl": {"body": [
+                    {"key": "body", "matcherName": "equals_json", "matchingValue": '{"foo": "bar"}'}
+                ]},
+                "responseDsl": {},
+            },
+            delay=None,
+        )
+    body = mock_req.call_args.kwargs["json"]
+    matcher = body["transactions"][0]["dsl"]["requestDsl"]["body"][0]
+    import base64
+    assert base64.b64decode(matcher["matchingValue"]).decode() == '{"foo": "bar"}'
+
+
+async def test_create_encodes_body_matcher_sample_body(manager):
+    with patch("sv_mcp.tools.vs.messaging_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.create(
+            transaction_name="t1",
+            workspace_id=1,
+            service_id=2,
+            type="MESSAGING",
+            dsl={
+                "requestDsl": {"body": [
+                    {"key": "body", "matcherName": "matches_json", "matchingValue": "[[$.foo, equalTo(bar)]]",
+                     "sampleBody": '{"foo": "bar"}'}
+                ]},
+                "responseDsl": {},
+            },
+            delay=None,
+        )
+    body = mock_req.call_args.kwargs["json"]
+    matcher = body["transactions"][0]["dsl"]["requestDsl"]["body"][0]
+    import base64
+    assert base64.b64decode(matcher["sampleBody"]).decode() == '{"foo": "bar"}'
+
+
+async def test_update_encodes_body_matcher_matching_value(manager):
+    with patch("sv_mcp.tools.vs.messaging_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.update(
+            id=10,
+            transaction_name="t1",
+            workspace_id=1,
+            type="MESSAGING",
+            dsl={
+                "requestDsl": {"body": [
+                    {"key": "body", "matcherName": "equals_json", "matchingValue": '{"foo": "bar"}'}
+                ]},
+                "responseDsl": {},
+            },
+            delay=None,
+        )
+    body = mock_req.call_args.kwargs["json"]
+    matcher = body["dsl"]["requestDsl"]["body"][0]
+    import base64
+    assert base64.b64decode(matcher["matchingValue"]).decode() == '{"foo": "bar"}'
+
+
+async def test_update_encodes_body_matcher_sample_body(manager):
+    with patch("sv_mcp.tools.vs.messaging_transaction_manager.vs_api_request") as mock_req:
+        mock_req.return_value = BaseResult(result=[])
+        await manager.update(
+            id=10,
+            transaction_name="t1",
+            workspace_id=1,
+            type="MESSAGING",
+            dsl={
+                "requestDsl": {"body": [
+                    {"key": "body", "matcherName": "matches_json", "matchingValue": "[[$.foo, equalTo(bar)]]",
+                     "sampleBody": '{"foo": "bar"}'}
+                ]},
+                "responseDsl": {},
+            },
+            delay=None,
+        )
+    body = mock_req.call_args.kwargs["json"]
+    matcher = body["dsl"]["requestDsl"]["body"][0]
+    import base64
+    assert base64.b64decode(matcher["sampleBody"]).decode() == '{"foo": "bar"}'
+
+
 async def test_update_with_extra_fields(manager):
     with patch("sv_mcp.tools.vs.messaging_transaction_manager.vs_api_request") as mock_req:
         mock_req.return_value = BaseResult(result=[])

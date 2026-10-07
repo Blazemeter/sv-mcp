@@ -48,6 +48,13 @@ def format_messaging_transactions(transactions: List[Any], params: Optional[dict
     for transaction in transactions:
         tm_raw = transaction.get("messagingTransactionMappings")
         txn_mapping = MessagingTransactionMapping(**tm_raw) if tm_raw else None
+        dsl_dict = transaction.get("dsl") or {}
+        request = dsl_dict.get("requestDsl") or {}
+        for body_matcher in request.get("body") or []:
+            if "matchingValue" in body_matcher:
+                body_matcher["matchingValue"] = _decode_body_matcher_value(body_matcher.get("matchingValue"))
+            if "sampleBody" in body_matcher:
+                body_matcher["sampleBody"] = _decode_body_matcher_value(body_matcher.get("sampleBody"))
         formatted_transactions.append(
             MessagingTransaction(
                 id=transaction.get("id"),
@@ -56,7 +63,7 @@ def format_messaging_transactions(transactions: List[Any], params: Optional[dict
                 description=transaction.get("description"),
                 tags=transaction.get("tags") or [],
                 priority=transaction.get("priority"),
-                dsl=MessagingDsl(**transaction.get("dsl")),
+                dsl=MessagingDsl(**dsl_dict),
                 messagingTransactionMappings=txn_mapping,
                 sampleBody=transaction.get("sampleBody"),
                 assets=[AssignedAsset(**d) for d in transaction.get("assets") or []],

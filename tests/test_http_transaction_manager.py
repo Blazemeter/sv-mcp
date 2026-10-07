@@ -315,3 +315,26 @@ def test_http_transaction_preserves_unexpected_extra_field():
         sampleBody="hello",
     )
     assert txn.model_dump()["sampleBody"] == "hello"
+
+
+class _CapturingMCP:
+    def __init__(self):
+        self.descriptions = {}
+
+    def tool(self, name, description):
+        self.descriptions[name] = description
+        return lambda fn: fn
+
+
+def test_create_and_test_description_documents_body_not_content():
+    """create_and_test test_cases go through SandboxManager.test_request, whose backend
+    field is `body` (plain text, encoded by the tool). Advertising `content (str base64)`
+    here made models send a body the backend silently drops."""
+    from sv_mcp.tools.vs import http_transaction_manager
+
+    mcp = _CapturingMCP()
+    http_transaction_manager.register(mcp, token=None)
+    description = mcp.descriptions["virtual_services_http_transaction"]
+    test_cases_doc = description.split("test_cases (list[SandboxRequest])", 1)[1].split("sampleBody", 1)[0]
+    assert "content" not in test_cases_doc
+    assert "body" in test_cases_doc

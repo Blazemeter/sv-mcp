@@ -356,7 +356,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 delay (int): Optional. Response delay in milliseconds.
                 test_cases (list[SandboxRequest]): Mandatory. At least one test request.
                     Each entry has: method (str), path (str), name (str),
-                    queryParameters (list, optional), headers (list, optional), content (str base64, optional).
+                    queryParameters (list, optional), headers (list, optional),
+                    body (str, optional): the request body as plain text - the tool base64-encodes it;
+                    never pre-encode it.
                 sampleBody (str): Optional. Fallback only — prefer setting sampleBody on the body matcher itself.
             Returns:
                 info: ["transaction_id=<id>", "tests_passed=<n>", "tests_total=<n>"]

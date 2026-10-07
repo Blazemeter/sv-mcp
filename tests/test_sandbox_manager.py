@@ -49,3 +49,17 @@ async def test_test_request_without_body_does_not_error(manager):
     http_request = mock_req.call_args.kwargs["json"]["httpRequest"]
     assert "body" not in http_request
     assert "content" not in http_request
+
+
+async def test_test_request_rejects_body_sent_as_content(manager):
+    """`content` was the old field name. The backend ignores it, so passing it through
+    would silently test with no body. It also may or may not be pre-encoded (old docs
+    said base64), so it cannot be safely aliased - reject it with a clear error."""
+    with patch("sv_mcp.tools.vs.sandbox_manager.vs_api_request") as mock_req:
+        result = await manager.test_request(
+            request={"method": "POST", "path": "/x", "name": "n", "content": '{"foo": "bar"}'},
+            workspace_id=1,
+        )
+    mock_req.assert_not_called()
+    assert result.error
+    assert "body" in result.error

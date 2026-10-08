@@ -52,12 +52,16 @@ class BaseVirtualServiceManager:
             result_formatter=format_virtual_services_action,
         )
 
-    async def configure(self, workspace_id: int, vs_id: int) -> BaseResult:
+    async def configure(self, workspace_id: int, vs_id: int, keep_blaze_data: Optional[bool] = None) -> BaseResult:
+        params = {}
+        if keep_blaze_data is not None:
+            params["keepBlazeData"] = keep_blaze_data
         return await vs_api_request(
             self.token,
             "GET",
             f"{WORKSPACES_ENDPOINT}/{workspace_id}/{VS_ENDPOINT}/{vs_id}/configure",
             result_formatter=format_virtual_services_action,
+            params=params,
         )
 
     async def assign_transactions(self, workspace_id: int, vs_id: int, transaction_ids: List[int]) -> BaseResult:

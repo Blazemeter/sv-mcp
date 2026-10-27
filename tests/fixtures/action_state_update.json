@@ -1,0 +1,26 @@
+[
+  {
+    "id": 901,
+    "name": "Store order",
+    "actionType": "STATE_UPDATE",
+    "transactionId": 77,
+    "priority": 2,
+    "definition": {
+      "arbitraryKey": "arbitrary value",
+      "nested": {
+        "items": [1, "two", null],
+        "flag": true
+      }
+    },
+    "conditions": [
+      {
+        "matcher": {
+          "key": "${request.query.id}",
+          "matcherName": "equals",
+          "matchingValue": "42"
+        }
+      }
+    ],
+    "assets": []
+  }
+]

@@ -340,6 +340,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args:
                 workspace_id (int): Mandatory.
                 id (int): Mandatory.
+                keepBlazeData (bool): Optional. false regenerates the service data, which resets the state of a stateful virtual service. true keeps the current state. Omit for the server default.
         - assign_transactions: Assign transactions to a messaging virtual service.
             When the broker config uses flow configurations, pass flow_configuration so the
             server can copy the named flow's routing (sourceName, sourceType, destinations)
@@ -414,7 +415,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "stop":
                     return await vs_manager.stop(args["workspace_id"], args["id"])
                 case "configure":
-                    return await vs_manager.configure(args["workspace_id"], args["id"])
+                    return await vs_manager.configure(args["workspace_id"], args["id"], args.get("keepBlazeData"))
                 case "read":
                     return await vs_manager.read(args["workspace_id"], args["id"])
                 case "list":

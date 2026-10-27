@@ -183,6 +183,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             args(VirtualService): A virtual service object with the following fields:
                 workspace_id (int): Mandatory. The id of the virtual service.
                 id (int): Mandatory. The id of the virtual service to update.
+                keepBlazeData (bool): Optional. false regenerates the service data, which resets the state of a stateful virtual service. true keeps the current state. Omit for the server default.
         - assign_transactions: Assigns the transactions to the virtual service. Transactions should belong to the same service as the virtual service.
             args(dict): Dictionary with the following required parameters:
                 workspace_id (int): Mandatory. The id of the workspace the virtual service belongs to.
@@ -249,7 +250,7 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 case "stop":
                     return await vs_manager.stop(args["workspace_id"], args["id"])
                 case "configure":
-                    return await vs_manager.configure(args["workspace_id"], args["id"])
+                    return await vs_manager.configure(args["workspace_id"], args["id"], args.get("keepBlazeData"))
                 case "read":
                     return await vs_manager.read(args["workspace_id"], args["id"])
                 case "list":

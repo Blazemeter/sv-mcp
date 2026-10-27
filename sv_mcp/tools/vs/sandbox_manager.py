@@ -1,3 +1,4 @@
+import base64
 from typing import Optional, Dict, Any
 
 import httpx
@@ -34,6 +35,16 @@ class SandboxManager:
         return result
 
     async def test_request(self, request: SandboxRequest, workspace_id: int) -> BaseResult:
+        # `content` is the old field name; the backend ignores it, which silently tests
+        # with no body. Old docs called it base64, so its encoding is ambiguous - reject it.
+        if "content" in request:
+            return BaseResult(
+                error="The request body must be sent in the `body` field as plain text, "
+                      "not in `content`. The tool base64-encodes `body` itself; do not pre-encode it."
+            )
+        body = request.get("body")
+        if body is not None:
+            request["body"] = base64.b64encode(body.encode("utf-8")).decode("utf-8")
         sandbox_request = {
             "httpRequest": request,
         }

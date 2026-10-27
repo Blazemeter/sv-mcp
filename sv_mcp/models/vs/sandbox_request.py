@@ -18,9 +18,13 @@ class SandboxRequest(BaseModel):
         [],
         description="List of response headers"
     )
-    content: Optional[str] = Field(
+    body: Optional[str] = Field(
         None,
-        description="Base64 encoded body of the response"
+        description=(
+            "Plain-text request body to send in the sandbox test. Do not base64-encode it "
+            "yourself - the tool encodes it automatically before sending it to the backend, "
+            "which expects a field named 'body' (not 'content') containing base64."
+        )
     )
 
     class Config:

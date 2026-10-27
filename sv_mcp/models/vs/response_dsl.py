@@ -17,7 +17,10 @@ class ResponseDsl(BaseModel):
     )
     content: Optional[str] = Field(
         None,
-        description="Base64 encoded body of the response"
+        description=(
+            "Body of the response. Plain text is accepted and base64-encoded by the tool; "
+            "values that are already base64 (e.g. convert_template output) are kept as-is."
+        )
     )
     statusCodeConditions: Optional[List[StatusCodeCondition]] = Field([],
                                                                       description="Status code conditions for the response")

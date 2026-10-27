@@ -16,7 +16,7 @@ from sv_mcp.models.vs.http_transaction import HttpTransaction
 from sv_mcp.models.vs.matching_log_entry import MatchingLogEntry
 from sv_mcp.models.vs.sandbox_response import SandboxResponse
 from sv_mcp.telemetry import run_tool
-from sv_mcp.tools.utils import vs_api_request, error_result
+from sv_mcp.tools.utils import vs_api_request, error_result, normalize_response_content
 from sv_mcp.tools.vs.sandbox_manager import SandboxManager
 
 
@@ -53,6 +53,7 @@ class HttpTransactionManager:
                      dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         sample_body_unused = sample_body is not None
         if request:
@@ -99,6 +100,7 @@ class HttpTransactionManager:
                      dsl: GenericDsl, delay: int, sample_body: Optional[str] = None) -> BaseResult:
         # Convert GenericDsl to dict for JSON serialization
         dsl_dict = dsl.model_dump() if isinstance(dsl, GenericDsl) else dsl
+        normalize_response_content(dsl_dict)
         request = dsl_dict.get("requestDsl")
         sample_body_unused = sample_body is not None
         if request:
@@ -285,11 +287,16 @@ def register(mcp, token: Optional[BzmToken]) -> None:
             not as a matcher.
             - Assign intermediate values with {{#assign "varName"}}{{value}}{{/assign}}.
             - Keep JSON objects outside helper calls; helpers should only produce values.
+            - A helper's output is inserted as raw text, so inside JSON wrap string values in quotes,
+              e.g. {"id": "{{jsonPath request.body '$.id'}}"} - without the quotes the response is invalid JSON.
             - Do not nest helpers more than 1–2 levels deep.
             - Each helper must have exactly one opening and one closing brace; do not add extra # or braces.
             - Use handlebars helpers supported by wiremock, specified in https://wiremock.org/docs/response-templating/
             - Use validate_template and convert_template actions to validate and convert templates before using them in transaction definition.
             - Dataset variables (from virtual_services_test_data) are referenced with ${fieldName} syntax, NOT Handlebars.
+              ${fieldName} is not a wildcard and does not capture request values: without a dataset it is
+              matched as literal text. To accept any value for a field use a path matcher with matching(.+),
+              e.g. [[$.id, matching(.+)]]; to put a request value into the response use Handlebars.
               Matcher name rules — MUST follow exactly:
                 * URL path with ${fieldName}: matcherName MUST be "equals_url". NEVER use "matches_url" with variables.
                 * Headers / query params / cookies: matcherName must be "equals" or "equals_insensitive" only.
@@ -356,7 +363,9 @@ def register(mcp, token: Optional[BzmToken]) -> None:
                 delay (int): Optional. Response delay in milliseconds.
                 test_cases (list[SandboxRequest]): Mandatory. At least one test request.
                     Each entry has: method (str), path (str), name (str),
-                    queryParameters (list, optional), headers (list, optional), content (str base64, optional).
+                    queryParameters (list, optional), headers (list, optional),
+                    body (str, optional): the request body as plain text - the tool base64-encodes it;
+                    never pre-encode it.
                 sampleBody (str): Optional. Fallback only — prefer setting sampleBody on the body matcher itself.
             Returns:
                 info: ["transaction_id=<id>", "tests_passed=<n>", "tests_total=<n>"]
